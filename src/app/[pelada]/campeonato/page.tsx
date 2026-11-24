@@ -8,6 +8,7 @@ import { calcularEstatisticas, carregarPeriodo, lideres, premioPorDias, type Dad
 import { curtaDia, inicioMes, inicioSemana, isoDia, nomeMes, deIso } from "@/lib/datas";
 import { Escolha } from "@/components/Folha";
 import Topo, { Carregando } from "@/components/Topo";
+import { GraficoBarras, GraficoColunas } from "@/components/Graficos";
 
 type Periodo = "semana" | "mes";
 
@@ -148,6 +149,28 @@ export default function CampeonatoPage() {
               </div>
             ))}
           </section>
+
+          <GraficoBarras
+            titulo="ARTILHARIA"
+            unidade="gols"
+            itens={[...linhas].filter((l) => l.gols > 0).sort((a, b) => b.gols - a.gols).slice(0, 8).map((l) => ({ rotulo: nome(l.membro_id), valor: l.gols, detalhe: `${l.assist} assist. em ${l.jogos} jogos` }))}
+          />
+          <GraficoBarras
+            titulo="MAIS VITÓRIAS"
+            unidade="vitórias"
+            itens={[...linhas].filter((l) => l.vitorias > 0).sort((a, b) => b.vitorias - a.vitorias).slice(0, 8).map((l) => ({ rotulo: nome(l.membro_id), valor: l.vitorias, detalhe: `${l.jogos ? Math.round((l.vitorias / l.jogos) * 100) : 0}% de aproveitamento` }))}
+          />
+          {d.eventos.length > 1 && (
+            <GraficoColunas
+              titulo="GOLS POR PELADA"
+              unidade="gols"
+              itens={d.eventos.map((e) => {
+                const pids = new Set(d.partidas.filter((p) => p.evento_id === e.id).map((p) => p.id));
+                const jogos = pids.size;
+                return { rotulo: curtaDia(e.data), valor: d.lances.filter((l) => pids.has(l.partida_id)).length, detalhe: `${jogos} jogos` };
+              })}
+            />
+          )}
 
           <section className="flex flex-col rounded-2xl border border-borda bg-white p-3">
             <span className="px-1 pb-2 text-xs font-bold tracking-wider text-apagado">TABELA · 3 POR VITÓRIA + 1 POR GOL</span>

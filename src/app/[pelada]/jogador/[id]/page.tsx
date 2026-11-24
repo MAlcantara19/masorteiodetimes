@@ -11,6 +11,7 @@ import { curtaDia } from "@/lib/datas";
 import { POSICOES } from "@/lib/elenco";
 import Carta from "@/components/Carta";
 import Topo, { Carregando } from "@/components/Topo";
+import { GraficoColunas } from "@/components/Graficos";
 
 type Medalha = { tipo: string; periodo: string; valor: number | null };
 const NOMES_MEDALHA: Record<string, string> = {
@@ -30,6 +31,7 @@ export default function JogadorPage() {
   const [elenco, setElenco] = useState<Membro[]>([]);
   const [cartas, setCartas] = useState<Map<string, InfoCarta> | null>(null);
   const [est, setEst] = useState<Map<string, Linha>>(new Map());
+  const [porPelada, setPorPelada] = useState<{ rotulo: string; valor: number; detalhe: string }[]>([]);
   const [medalhas, setMedalhas] = useState<Medalha[]>([]);
   const [foto, setFoto] = useState<{ foto_url: string | null; cor_card: string | null } | null>(null);
   const [outro, setOutro] = useState("");
@@ -40,6 +42,16 @@ export default function JogadorPage() {
     carregarCartas(pelada.id).then(({ cartas: c, temporada }) => {
       setCartas(c);
       setEst(calcularEstatisticas(temporada));
+      // Gols + assistências em cada pelada da temporada em que jogou.
+      setPorPelada(
+        temporada.eventos
+          .map((e) => {
+            const um = calcularEstatisticas({ ...temporada, eventos: [e], partidas: temporada.partidas.filter((p) => p.evento_id === e.id) }).get(id);
+            return um && (um.jogos || um.goleiro.jogos) ? { rotulo: curtaDia(e.data), valor: um.gols + um.assist, detalhe: `${um.gols} gols, ${um.assist} assist., ${um.vitorias}V em ${um.jogos || um.goleiro.jogos} jogos` } : null;
+          })
+          .filter((x): x is { rotulo: string; valor: number; detalhe: string } => !!x)
+          .slice(-12),
+      );
       // Craque do dia também conta como medalha.
       const craques = temporada.eventos.flatMap((e) =>
         premioPorDias({ ...temporada, eventos: [e] }, "craque").filter((x) => x === id).map(() => ({ tipo: "craque", periodo: e.data, valor: null })),
@@ -116,6 +128,8 @@ export default function JogadorPage() {
         ))}
       </section>
       <span className="-mt-2 text-center text-xs text-apagado">Temporada {new Date().getFullYear()}</span>
+
+      {porPelada.length > 1 && !m.goleiro && <GraficoColunas titulo="GOLS + ASSISTÊNCIAS POR PELADA" unidade="participações em gol" itens={porPelada} />}
 
       <section className="flex flex-col gap-2 rounded-2xl border border-borda bg-white p-4">
         <span className="text-xs font-bold tracking-wider text-apagado">MEDALHAS</span>

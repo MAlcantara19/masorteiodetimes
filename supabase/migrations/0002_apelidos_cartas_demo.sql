@@ -30,3 +30,6 @@ from (values
   ('Matheus Alcântara', array['Alcântara', 'Alcantara', 'Matheus'])
 ) as v(nome, apelidos)
 where m.nome = v.nome and m.pelada_id = (select id from public.peladas where slug = 'bola-fora');
+
+-- A Pelada Piloto (criada pelo scripts/criar-pelada-piloto.py) é a pelada de demonstração do tour.
+update public.peladas set demo = true where slug = 'piloto';
