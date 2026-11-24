@@ -6,6 +6,58 @@ import { useSessao } from "@/lib/sessao";
 import { usePelada } from "@/lib/pelada";
 import Topo, { Carregando } from "@/components/Topo";
 import FormPelada from "@/components/FormPelada";
+import QrPix from "@/components/QrPix";
+import type { Pelada } from "@/lib/pelada";
+
+// Chave Pix da pelada (pra mensalidade). Aparece pra galera na tela Mensalidade.
+function ConfigPix({ pelada, aoSalvar }: { pelada: Pelada; aoSalvar: () => void }) {
+  const [chave, setChave] = useState(pelada.pix_chave ?? "");
+  const [nome, setNome] = useState(pelada.pix_nome ?? "");
+  const [cidade, setCidade] = useState(pelada.pix_cidade ?? "");
+  const [erro, setErro] = useState<string | null>(null);
+  async function salvar() {
+    const { error } = await criarClienteSupabase()
+      .from("peladas")
+      .update({ pix_chave: chave.trim() || null, pix_nome: nome.trim() || null, pix_cidade: cidade.trim() || null })
+      .eq("id", pelada.id);
+    if (error) return setErro("Pra salvar o Pix, rode no Supabase o SQL novo (supabase/migrations/0003).");
+    setErro(null);
+    aoSalvar();
+  }
+  const campo = "h-11 rounded-xl border border-borda px-3 text-[15px] font-normal";
+  return (
+    <section className="flex flex-col gap-2 rounded-2xl border border-borda bg-white p-4">
+      <span className="font-semibold">Pix da mensalidade</span>
+      <label className="flex flex-col gap-1 text-[13px] font-semibold">
+        Chave Pix (celular, e-mail, CPF ou aleatória)
+        <input value={chave} onChange={(e) => setChave(e.target.value)} className={campo} placeholder="+5524999999999" />
+      </label>
+      <div className="grid grid-cols-2 gap-2">
+        <label className="flex flex-col gap-1 text-[13px] font-semibold">
+          Nome de quem recebe
+          <input value={nome} onChange={(e) => setNome(e.target.value)} className={campo} placeholder="Matheus Alcântara" />
+        </label>
+        <label className="flex flex-col gap-1 text-[13px] font-semibold">
+          Cidade
+          <input value={cidade} onChange={(e) => setCidade(e.target.value)} className={campo} placeholder="Resende" />
+        </label>
+      </div>
+      <span className="text-xs text-apagado">Celular no formato +55 DDD número. A chave aparece pra galera da pelada na hora de pagar.</span>
+      {erro && <p className="rounded-xl bg-alerta-suave px-3 py-2 text-sm text-alerta-escuro">{erro}</p>}
+      <button type="button" onClick={salvar} className="h-11 rounded-xl bg-roxo font-semibold text-white">
+        Salvar Pix
+      </button>
+      {pelada.pix_chave && (
+        <details className="text-sm">
+          <summary className="cursor-pointer font-semibold text-roxo">Ver o QR Code de teste</summary>
+          <div className="pt-3">
+            <QrPix chave={pelada.pix_chave} nome={pelada.pix_nome || pelada.nome} cidade={pelada.pix_cidade || "BRASIL"} valor={pelada.mensalidade ? Number(pelada.mensalidade) : null} />
+          </div>
+        </details>
+      )}
+    </section>
+  );
+}
 
 export default function ConfigPage() {
   const { pelada, naoAchou, recarregar } = usePelada();
@@ -52,7 +104,7 @@ export default function ConfigPage() {
       <Topo titulo="Configurar pelada" sub={pelada.nome} voltar="/mais" />
 
       <section className="flex flex-col gap-2 rounded-2xl bg-noite p-4 text-white">
-        <span className="text-sm text-[#CFC7E0]">PIN do ao vivo (passe no grupo pra quem vai marcar o placar)</span>
+        <span className="text-sm text-[#CFC7E0]">PIN do ao vivo (pra quem vai marcar o placar sem ter conta; quem é da pelada e está logado já mexe)</span>
         <div className="flex items-center justify-between">
           <span className="font-display text-4xl font-bold tracking-[0.3em] text-roxo-claro">{pin ?? "····"}</span>
           <button type="button" onClick={novoPin} className="h-10 rounded-xl bg-white/15 px-3 text-sm font-semibold">
@@ -60,6 +112,8 @@ export default function ConfigPage() {
           </button>
         </div>
       </section>
+
+      <ConfigPix pelada={pelada} aoSalvar={() => { recarregar(); setAviso("Pix salvo!"); }} />
 
       <section className="flex items-center gap-4 rounded-2xl border border-borda bg-white p-4">
         <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-roxo-suave text-xs text-roxo-escuro">

@@ -22,6 +22,9 @@ export type Pelada = {
   regra_empate: "sai_quem_ficou" | "sai_os_dois" | "penaltis";
   lembrete_horas_antes: number;
   mensalidade: number | null;
+  pix_chave?: string | null; // (SQL 0003)
+  pix_nome?: string | null;
+  pix_cidade?: string | null;
 };
 
 export type Atributos = {
@@ -49,6 +52,7 @@ export type Membro = {
   goleiro: boolean;
   convidado: boolean;
   ativo: boolean;
+  nascimento?: string | null; // "AAAA-MM-DD" (SQL 0003)
   nota?: Nota | null; // só vem pra admin (RLS)
 };
 
@@ -98,8 +102,6 @@ export function criarSlug(nome: string): string {
     .slice(0, 40);
 }
 
-const CAMPOS = "id, nome, slug, dia_semana, horario, horario_fim, local, logo_url, cor_banner, regra_fim, minutos, gols_limite, regra_empate, lembrete_horas_antes, mensalidade";
-
 // Carrega a pelada do endereço atual. `naoAchou` = slug inválido.
 export function usePelada() {
   const params = useParams<{ pelada?: string; slug?: string }>();
@@ -109,7 +111,8 @@ export function usePelada() {
 
   const carregar = useCallback(async () => {
     if (!slug) return;
-    const { data } = await criarClienteSupabase().from("peladas").select(CAMPOS).eq("slug", slug).maybeSingle();
+    // "*" pega também as colunas novas (Pix) quando o SQL 0003 já rodou.
+    const { data } = await criarClienteSupabase().from("peladas").select("*").eq("slug", slug).maybeSingle();
     if (!data) setNaoAchou(true);
     else {
       setPelada(data as Pelada);
@@ -130,7 +133,9 @@ export async function carregarElenco(peladaId: string, comNotas: boolean): Promi
   const sb = criarClienteSupabase();
   const base = "id, pelada_id, profile_id, nome, apelido, papel, posicao, sabe_marcar, goleiro, convidado, ativo";
   const notas = comNotas ? ", nota:notas(nota_simples, atributos, usar_completa)" : "";
-  let { data, error } = await sb.from("membros").select(`${base}, apelidos${notas}`).eq("pelada_id", peladaId).order("nome");
+  let { data, error } = await sb.from("membros").select(`${base}, apelidos, nascimento${notas}`).eq("pelada_id", peladaId).order("nome");
+  // Sem o SQL 0003 (nascimento), tenta só com os apelidos (SQL 0002).
+  if (error) ({ data, error } = await sb.from("membros").select(`${base}, apelidos${notas}`).eq("pelada_id", peladaId).order("nome"));
   // Se o SQL novo (apelidos) ainda não foi rodado no Supabase, carrega sem essa coluna.
   if (error) ({ data, error } = await sb.from("membros").select(`${base}${notas}`).eq("pelada_id", peladaId).order("nome"));
   return ((data ?? []) as unknown as Membro[]).map((m) => ({

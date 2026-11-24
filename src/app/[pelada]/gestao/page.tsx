@@ -32,6 +32,7 @@ export default function GestaoPage() {
   const [eventos, setEventos] = useState<{ id: string; data: string }[]>([]);
   const [presencas, setPresencas] = useState<{ evento_id: string; membro_id: string; status: string }[]>([]);
   const [pagos, setPagos] = useState<Set<string>>(new Set());
+  const [avisaram, setAvisaram] = useState<Set<string>>(new Set());
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
   const [copiado, setCopiado] = useState(false);
 
@@ -50,11 +51,12 @@ export default function GestaoPage() {
     const ids = lista.map((e) => e.id);
     const [{ data: pr }, { data: pg }, { data: av }] = await Promise.all([
       ids.length ? sb.from("presencas").select("evento_id, membro_id, status").in("evento_id", ids) : Promise.resolve({ data: [] }),
-      sb.from("pagamentos").select("membro_id, pago").eq("pelada_id", pelada.id).eq("mes", mesIni),
+      sb.from("pagamentos").select("*").eq("pelada_id", pelada.id).eq("mes", mesIni),
       ids.length ? sb.from("avaliacoes").select("*").in("evento_id", ids).order("created_at", { ascending: false }) : Promise.resolve({ data: [] }),
     ]);
     setPresencas(pr ?? []);
     setPagos(new Set((pg ?? []).filter((p) => p.pago).map((p) => p.membro_id)));
+    setAvisaram(new Set((pg ?? []).filter((p) => !p.pago && p.informado_em).map((p) => p.membro_id)));
     setAvaliacoes((av ?? []) as Avaliacao[]);
   }, [pelada, admin, mesIni, mesFim]);
 
@@ -95,6 +97,8 @@ export default function GestaoPage() {
     "",
     "Falta acertar:",
     ...devendo.map((m) => `• ${nomeCurto(m)}`),
+    "",
+    pelada.pix_chave && typeof window !== "undefined" ? `Paga pelo Pix aqui (QR Code e copia e cola): ${window.location.origin}/${slug}/pagar` : "",
     "",
     "Valeu, galera! ⚽",
   ].join("\n");
@@ -188,7 +192,9 @@ export default function GestaoPage() {
               <div key={m.id} className="flex items-center justify-between border-b border-borda py-2.5 text-sm last:border-0">
                 <span className="font-semibold">{nomeCurto(m)}</span>
                 <span className="flex items-center gap-2">
-                  <span className={`text-xs font-bold ${pagos.has(m.id) ? "text-zap" : "text-alerta"}`}>{pagos.has(m.id) ? "PAGO" : "DEVENDO"}</span>
+                  <span className={`text-xs font-bold ${pagos.has(m.id) ? "text-zap" : avisaram.has(m.id) ? "text-roxo" : "text-alerta"}`}>
+                    {pagos.has(m.id) ? "PAGO" : avisaram.has(m.id) ? "AVISOU QUE PAGOU" : "DEVENDO"}
+                  </span>
                   <Interruptor rotulo={`${nomeCurto(m)} pagou`} ligado={pagos.has(m.id)} aoMudar={(v) => marcarPago(m, v)} />
                 </span>
               </div>
