@@ -42,6 +42,7 @@ export type Membro = {
   profile_id: string | null;
   nome: string;
   apelido: string | null;
+  apelidos?: string[] | null; // outros jeitos de chamar (pra reconhecer na lista do Zap)
   papel: "admin" | "jogador";
   posicao: Posicao;
   sabe_marcar: boolean;
@@ -127,10 +128,11 @@ export function usePelada() {
 // Elenco da pelada. Pra admin, já vem com as notas; pra jogador, `nota` vem vazio (o banco não deixa ler).
 export async function carregarElenco(peladaId: string, comNotas: boolean): Promise<Membro[]> {
   const sb = criarClienteSupabase();
-  const sel = comNotas
-    ? "id, pelada_id, profile_id, nome, apelido, papel, posicao, sabe_marcar, goleiro, convidado, ativo, nota:notas(nota_simples, atributos, usar_completa)"
-    : "id, pelada_id, profile_id, nome, apelido, papel, posicao, sabe_marcar, goleiro, convidado, ativo";
-  const { data } = await sb.from("membros").select(sel).eq("pelada_id", peladaId).order("nome");
+  const base = "id, pelada_id, profile_id, nome, apelido, papel, posicao, sabe_marcar, goleiro, convidado, ativo";
+  const notas = comNotas ? ", nota:notas(nota_simples, atributos, usar_completa)" : "";
+  let { data, error } = await sb.from("membros").select(`${base}, apelidos${notas}`).eq("pelada_id", peladaId).order("nome");
+  // Se o SQL novo (apelidos) ainda não foi rodado no Supabase, carrega sem essa coluna.
+  if (error) ({ data, error } = await sb.from("membros").select(`${base}${notas}`).eq("pelada_id", peladaId).order("nome"));
   return ((data ?? []) as unknown as Membro[]).map((m) => ({
     ...m,
     nota: Array.isArray(m.nota) ? (m.nota[0] ?? null) : (m.nota ?? null),

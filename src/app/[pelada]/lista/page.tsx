@@ -12,7 +12,7 @@ import { eventoAtual } from "@/lib/evento";
 import Topo, { Carregando } from "@/components/Topo";
 
 type Secao = "linha" | "goleiros" | "suplentes";
-type Item = { secao: Secao; nome: string; membro: Membro | null; sugestao: Membro | null; decidido: boolean };
+type Item = { secao: Secao; nome: string; membro: Membro | null; sugestao: Membro | null; opcoes?: Membro[]; decidido: boolean };
 
 export default function ListaPage() {
   const router = useRouter();
@@ -42,7 +42,9 @@ export default function ListaPage() {
       casarComElenco(nomes, ativos).map((c) =>
         c.tipo === "exato"
           ? { secao, nome: c.nome, membro: c.jogador, sugestao: null, decidido: true }
-          : c.tipo === "parecido"
+          : c.tipo === "ambiguo"
+            ? { secao, nome: c.nome, membro: null, sugestao: null, opcoes: c.opcoes, decidido: false }
+            : c.tipo === "parecido"
             ? { secao, nome: c.nome, membro: null, sugestao: c.jogador, decidido: false }
             : { secao, nome: c.nome, membro: null, sugestao: null, decidido: true },
       );
@@ -50,8 +52,9 @@ export default function ListaPage() {
     setErro(null);
   }
 
-  function decidir(i: number, ehEle: boolean) {
-    setItens(itens.map((x, k) => (k === i ? { ...x, membro: ehEle ? x.sugestao : null, decidido: true } : x)));
+  // Escolhe quem é (ou null = é outra pessoa, cadastra como novo).
+  function decidir(i: number, quem: Membro | null) {
+    setItens(itens.map((x, k) => (k === i ? { ...x, membro: quem, decidido: true } : x)));
   }
 
   const duvidas = itens.map((x, i) => [x, i] as const).filter(([x]) => !x.decidido);
@@ -163,13 +166,29 @@ export default function ListaPage() {
           <h2 className="font-semibold">Confirma {duvidas.length === 1 ? "esse" : `esses ${duvidas.length}`}, por favor</h2>
           {duvidas.map(([x, i]) => (
             <div key={i} className="flex items-center gap-2">
-              <span className="flex-1 text-sm">
-                <strong>{x.nome}</strong> é o <strong>{x.sugestao ? nomeCurto(x.sugestao) : ""}</strong>?
-              </span>
-              <button type="button" onClick={() => decidir(i, true)} className="h-9 rounded-lg bg-roxo px-3 text-sm font-semibold text-white">
-                É ele
-              </button>
-              <button type="button" onClick={() => decidir(i, false)} className="h-9 rounded-lg border border-borda px-3 text-sm font-semibold">
+              {x.opcoes ? (
+                <span className="flex flex-1 flex-wrap items-center gap-1.5 text-sm">
+                  <span>
+                    <strong>{x.nome}</strong> é qual?
+                  </span>
+                  {x.opcoes.map((o) => (
+                    <button key={o.id} type="button" onClick={() => decidir(i, o)} className="h-9 rounded-lg bg-roxo px-3 text-sm font-semibold text-white">
+                      {nomeCurto(o)}
+                      {o.apelido && o.apelido !== o.nome ? <span className="font-normal opacity-80"> ({o.nome.split(" ")[0]})</span> : null}
+                    </button>
+                  ))}
+                </span>
+              ) : (
+                <>
+                  <span className="flex-1 text-sm">
+                    <strong>{x.nome}</strong> é o <strong>{x.sugestao ? nomeCurto(x.sugestao) : ""}</strong>?
+                  </span>
+                  <button type="button" onClick={() => decidir(i, x.sugestao)} className="h-9 rounded-lg bg-roxo px-3 text-sm font-semibold text-white">
+                    É ele
+                  </button>
+                </>
+              )}
+              <button type="button" onClick={() => decidir(i, null)} className="h-9 rounded-lg border border-borda px-3 text-sm font-semibold">
                 É outro
               </button>
             </div>

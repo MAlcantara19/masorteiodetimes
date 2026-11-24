@@ -41,12 +41,13 @@ type Rascunho = {
   atributos: Atributos;
   email: string;
   profile_id: string | null;
+  apelidos: string; // outros nomes, separados por vírgula
 };
 
 function novoRascunho(): Rascunho {
   return {
     id: null, nome: "", apelido: "", posicao: "Q", sabe_marcar: false, goleiro: false, convidado: false, ativo: true,
-    nota: 3, modo: "simples", atributos: { ...ATRIBUTOS_PADRAO }, email: "", profile_id: null,
+    nota: 3, modo: "simples", atributos: { ...ATRIBUTOS_PADRAO }, email: "", profile_id: null, apelidos: "",
   };
 }
 
@@ -81,7 +82,7 @@ export default function JogadoresPage() {
     const q = normalizar(busca);
     return (elenco ?? [])
       .filter((m) => mostrarInativos || m.ativo)
-      .filter((m) => !q || normalizar(`${m.nome} ${m.apelido ?? ""}`).includes(q))
+      .filter((m) => !q || normalizar(`${m.nome} ${m.apelido ?? ""} ${(m.apelidos ?? []).join(" ")}`).includes(q))
       .sort((a, b) => nomeCurto(a).localeCompare(nomeCurto(b)));
   }, [elenco, busca, mostrarInativos]);
 
@@ -102,7 +103,7 @@ export default function JogadoresPage() {
       id: m.id, nome: m.nome, apelido: m.apelido ?? "", posicao: m.posicao, sabe_marcar: m.sabe_marcar, goleiro: m.goleiro,
       convidado: m.convidado, ativo: m.ativo, nota: n ? Number(n.nota_simples) : 3,
       modo: n?.usar_completa ? "completa" : "simples", atributos: n?.atributos ?? { ...ATRIBUTOS_PADRAO },
-      email: "", profile_id: m.profile_id,
+      email: "", profile_id: m.profile_id, apelidos: (m.apelidos ?? []).join(", "),
     });
   }
 
@@ -124,9 +125,12 @@ export default function JogadoresPage() {
       pelada_id: pelada.id, nome: edit.nome.trim(), apelido: edit.apelido.trim() || null, posicao: edit.posicao,
       sabe_marcar: edit.sabe_marcar, goleiro: edit.goleiro, convidado: edit.convidado, ativo: edit.ativo, profile_id: profileId,
     };
-    const res = edit.id
-      ? await sb.from("membros").update(dados).eq("id", edit.id).select("id").single()
-      : await sb.from("membros").insert(dados).select("id").single();
+    const apelidos = [...new Set(edit.apelidos.split(",").map((x) => x.trim()).filter(Boolean))];
+    const salvarMembro = (d: object) =>
+      edit.id ? sb.from("membros").update(d).eq("id", edit.id).select("id").single() : sb.from("membros").insert(d).select("id").single();
+    let res = await salvarMembro({ ...dados, apelidos });
+    // Banco ainda sem a coluna "apelidos" (SQL 0002 não rodado): salva o resto.
+    if (res.error && /apelidos/.test(res.error.message)) res = await salvarMembro(dados);
     if (res.error || !res.data) {
       setSalvando(false);
       return setAviso(res.error?.code === "23505" ? "Essa pessoa já está no elenco." : "Não deu pra salvar.");
@@ -244,6 +248,17 @@ export default function JogadoresPage() {
                 <input value={edit.apelido} onChange={(e) => setEdit({ ...edit, apelido: e.target.value })} className="h-11 rounded-xl border border-borda px-3 text-[15px] font-normal" />
               </label>
             </div>
+
+            <label className="flex flex-col gap-1 text-[13px] font-semibold">
+              Outros nomes (separados por vírgula)
+              <input
+                value={edit.apelidos}
+                onChange={(e) => setEdit({ ...edit, apelidos: e.target.value })}
+                placeholder="Bruno, Vida Animal, Bruno Vida Animal"
+                className="h-11 rounded-xl border border-borda px-3 text-[15px] font-normal"
+              />
+              <span className="font-normal text-apagado">Quando colar a lista do Zap, qualquer um desses nomes vira este jogador.</span>
+            </label>
 
             <Escolha
               rotulo="Tipo de avaliação"

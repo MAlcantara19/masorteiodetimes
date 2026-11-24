@@ -85,26 +85,37 @@ export function similaridade(a: string, b: string): number {
 export type Casamento<T> =
   | { tipo: "exato"; nome: string; jogador: T }
   | { tipo: "parecido"; nome: string; jogador: T; score: number }
+  | { tipo: "ambiguo"; nome: string; opcoes: T[] }
   | { tipo: "novo"; nome: string };
 
-// Procura cada nome da lista no elenco: igual, começo do nome, ou parecido.
-export function casarComElenco<T extends { nome: string; apelido?: string | null }>(
-  nomes: string[],
-  elenco: T[],
-): Casamento<T>[] {
+type ComNomes = { nome: string; apelido?: string | null; apelidos?: string[] | null };
+
+// Todos os jeitos de chamar o jogador: nome, apelido principal e os outros apelidos.
+function nomesDe(j: ComNomes): string[] {
+  return [j.nome, j.apelido ?? "", ...(j.apelidos ?? [])].filter((x) => x && x.trim());
+}
+
+// Procura cada nome da lista no elenco: igual (nome ou qualquer apelido), palavra do nome, ou parecido.
+// Se bater com mais de um jogador, devolve "ambiguo" pra pessoa escolher.
+export function casarComElenco<T extends ComNomes>(nomes: string[], elenco: T[]): Casamento<T>[] {
   return nomes.map((nome) => {
     const n = normalizar(nome);
-    const exato = elenco.find((j) => normalizar(j.apelido || "") === n || normalizar(j.nome) === n);
-    if (exato) return { tipo: "exato", nome, jogador: exato };
+    const exatos = elenco.filter((j) => nomesDe(j).some((x) => normalizar(x) === n));
+    if (exatos.length === 1) return { tipo: "exato", nome, jogador: exatos[0] };
+    if (exatos.length > 1) return { tipo: "ambiguo", nome, opcoes: exatos };
     // "Budziak" casa com "Lucas Budziak", "Renan" com "Renan Tarcitano" (se só houver um).
     const temPalavra = (alvo: string) => normalizar(alvo).split(" ").length > 1 && (" " + normalizar(alvo) + " ").includes(" " + n + " ");
-    const prefixo = elenco.filter((j) => temPalavra(j.nome) || temPalavra(j.apelido || ""));
-    if (prefixo.length === 1) return { tipo: "exato", nome, jogador: prefixo[0] };
+    const porPalavra = elenco.filter((j) => nomesDe(j).some(temPalavra));
+    if (porPalavra.length === 1) return { tipo: "exato", nome, jogador: porPalavra[0] };
+    if (porPalavra.length > 1) return { tipo: "ambiguo", nome, opcoes: porPalavra };
     let melhor: T | null = null;
     let score = 0;
     for (const j of elenco) {
-      const s = Math.max(similaridade(nome, j.nome), j.apelido ? similaridade(nome, j.apelido) : 0);
-      if (s > score) { score = s; melhor = j; }
+      const sc = Math.max(...nomesDe(j).map((x) => similaridade(nome, x)));
+      if (sc > score) {
+        score = sc;
+        melhor = j;
+      }
     }
     if (melhor && score >= 0.6) return { tipo: "parecido", nome, jogador: melhor, score };
     return { tipo: "novo", nome };
