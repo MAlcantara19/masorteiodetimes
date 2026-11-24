@@ -35,7 +35,8 @@ type Dados = {
   sorteio: SorteioSalvo | null;
   partidas: Partida[];
   lances: Lance[];
-  pausa: Pausa | null;
+  pausa: Pausa | null; // a pausa em aberto (se o jogo está parado)
+  pausas: Pausa[]; // todas as pausas do jogo em campo
   presencas: Presenca[];
 };
 
@@ -49,8 +50,10 @@ type FolhaAberta =
   | null;
 
 export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publico: boolean }) {
-  const { usuario, perfil, ehAdmin } = useSessao();
+  const { usuario, perfil, ehAdmin, vinculos } = useSessao();
   const admin = !!usuario && ehAdmin(pelada.id);
+  // Membro logado da pelada mexe no cronômetro/placar sem PIN (SQL 0003).
+  const membro = admin || vinculos.some((v) => v.pelada.id === pelada.id);
   const [dados, setDados] = useState<Dados | null | undefined>(undefined);
   const [elenco, setElenco] = useState<Membro[]>([]);
   const [dif, setDif] = useState(0);
@@ -82,14 +85,15 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
     const atual = partidas[partidas.length - 1];
     const [{ data: ls }, { data: pa }] = await Promise.all([
       ids.length ? sb.from("lances").select("*").in("partida_id", ids).order("created_at") : Promise.resolve({ data: [] }),
-      atual ? sb.from("pausas").select("*").eq("partida_id", atual.id).is("fim", null).maybeSingle() : Promise.resolve({ data: null }),
+      atual ? sb.from("pausas").select("*").eq("partida_id", atual.id).order("inicio") : Promise.resolve({ data: [] }),
     ]);
     setDados({
       evento: ev,
       sorteio: sorteios.find((s) => s.oficial) ?? sorteios[sorteios.length - 1] ?? null,
       partidas,
       lances: (ls ?? []) as Lance[],
-      pausa: (pa as Pausa) ?? null,
+      pausa: ((pa ?? []) as Pausa[]).find((x) => !x.fim) ?? null,
+      pausas: (pa ?? []) as Pausa[],
       presencas,
     });
   }, [pelada.id]);
@@ -207,7 +211,7 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
   if (dados === undefined) return <Carregando />;
 
   // ---------- Ações ----------
-  const podeMexer = admin || !!pin;
+  const podeMexer = membro || !!pin;
 
   function comPermissao(f: () => void) {
     if (podeMexer) f();
@@ -235,6 +239,11 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
       p.segundos_pausados += Math.round((Date.now() + dif - new Date(p.pausado_em).getTime()) / 1000);
       p.status = "rolando";
       p.pausado_em = null;
+    } else if (nomeAcao === "motivo_pausa" && dados.pausa) {
+      const motivo = (d.motivo as string) || null;
+      const pausa = { ...dados.pausa, motivo };
+      setDados({ ...dados, pausa, pausas: dados.pausas.map((x) => (x.id === pausa.id ? pausa : x)) });
+      return;
     } else return;
     setDados({ ...dados, partidas: dados.partidas.map((x) => (x.id === p.id ? p : x)) });
   }
@@ -248,7 +257,7 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
     otimista(nomeAcao, d);
     if ((nomeAcao === "gol" || nomeAcao === "gol_contra") && navigator.vibrate) navigator.vibrate(40);
     // Lê o PIN do aparelho na hora (pode ter acabado de ser digitado).
-    const p = admin ? null : lerPin(pelada.id);
+    const p = membro ? null : lerPin(pelada.id);
     const r = await enviarAcao({ partida: partida.id, acao: nomeAcao, dados: d, pin: p?.pin ?? null, nome: p?.nome ?? null });
     if (r.offline) {
       setPendentes(acoesPendentes());
@@ -286,7 +295,7 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
         p_time_b: prox[1],
         p_goleiro_a: gk[prox[0]] ?? null,
         p_goleiro_b: gk[prox[1]] ?? null,
-        p_pin: admin ? null : (lerPin(pelada.id)?.pin ?? null),
+        p_pin: membro ? null : (lerPin(pelada.id)?.pin ?? null),
       });
       if (error) setAviso("Jogo encerrado, mas não deu pra chamar o próximo: " + error.message);
     }
@@ -335,14 +344,24 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
   const statusTxt =
     partida.status === "encerrada"
       ? "ENCERRADO"
-      : fimDoTempo
-        ? "FIM DE JOGO"
-        : partida.status === "rolando"
-          ? "ROLANDO"
-          : partida.status === "pausado"
-            ? `PAUSADO${dados.pausa?.motivo ? " · " + dados.pausa.motivo.toUpperCase() : ""}`
+      : partida.status === "pausado"
+        ? `PAUSADO${dados.pausa?.motivo ? " · " + dados.pausa.motivo.toUpperCase() : ""}`
+        : fimDoTempo
+          ? "TEMPO ESGOTADO · CONTANDO O EXCEDIDO"
+          : partida.status === "rolando"
+            ? "ROLANDO"
             : "PRONTO PRA COMEÇAR";
-  const relogio = formatarRelogio(contaPraCima ? rolando : restante);
+  // Passou do tempo: não para, conta o tempo excedido pra cima (+0:01, +0:02…).
+  const excedido = !contaPraCima && partida.status !== "aguardando" && restante < 0 ? -restante : 0;
+  const relogio = contaPraCima ? formatarRelogio(rolando) : excedido ? `+${formatarRelogio(excedido)}` : formatarRelogio(restante);
+  // Tempo real (relógio de parede desde o apito) × bola rolando × parado.
+  const fimReal = partida.encerrada_em ? new Date(partida.encerrada_em).getTime() : agoraServidor;
+  const tempoReal = partida.inicio_em ? Math.max(0, (fimReal - new Date(partida.inicio_em).getTime()) / 1000) : 0;
+  const tempoParado = Math.max(0, tempoReal - rolando);
+  const pausasTxt = dados.pausas.map((pz) => {
+    const fimPz = pz.fim ? new Date(pz.fim).getTime() : agoraServidor;
+    return { motivo: pz.motivo ?? "sem motivo", seg: Math.max(0, (fimPz - new Date(pz.inicio).getTime()) / 1000), aberta: !pz.fim };
+  });
 
   // Resumo do dia
   const encerradas = dados.partidas.filter((p) => p.status === "encerrada");
@@ -432,6 +451,34 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
         <span className={`font-display text-[84px] leading-none font-bold tabular-nums ${fimDoTempo ? "text-alerta-suave" : ""}`} aria-live="off">
           {relogio}
         </span>
+        {partida.inicio_em && (
+          <div className="grid w-full grid-cols-3 gap-1 text-center text-[11px] text-[#CFC7E0]">
+            <span>
+              Tempo real
+              <br />
+              <strong className="font-display text-sm text-white tabular-nums">{formatarRelogio(tempoReal)}</strong>
+            </span>
+            <span>
+              Bola rolando
+              <br />
+              <strong className="font-display text-sm text-white tabular-nums">{formatarRelogio(rolando)}</strong>
+            </span>
+            <span>
+              Parado
+              <br />
+              <strong className="font-display text-sm text-white tabular-nums">{formatarRelogio(tempoParado)}</strong>
+            </span>
+          </div>
+        )}
+        {pausasTxt.length > 0 && (
+          <div className="flex w-full flex-wrap justify-center gap-1.5 text-[11px]">
+            {pausasTxt.map((pz, k) => (
+              <span key={k} className={`rounded-full px-2 py-0.5 ${pz.aberta ? "bg-alerta text-white" : "bg-white/10 text-[#CFC7E0]"}`}>
+                ⏸ {pz.motivo} · {formatarRelogio(pz.seg)}
+              </span>
+            ))}
+          </div>
+        )}
         {pausadoHa > 60 && (
           <span className="rounded-lg bg-alerta px-3 py-1.5 text-center text-[13px] font-semibold">
             Jogo parado há {formatarRelogio(pausadoHa)}. Não esquece de voltar o tempo.
@@ -524,6 +571,39 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
           </div>
         ))}
       </section>
+
+      {/* Placar do dia: vitórias de cada time e quem ganhou de quem */}
+      {encerradas.length > 0 && (
+        <section className="flex flex-col gap-2 rounded-2xl border border-borda bg-white p-4">
+          <span className="text-xs font-bold tracking-wider text-apagado">PLACAR DO DIA</span>
+          <div className="flex flex-wrap gap-2">
+            {times.map((_, t) => {
+              const jogos = encerradas.filter((p) => p.time_a === t || p.time_b === t);
+              const v = vitorias.get(t) ?? 0;
+              const e = jogos.filter((p) => (p.vencedor ?? (p.placar_a > p.placar_b ? p.time_a : p.placar_b > p.placar_a ? p.time_b : null)) === null).length;
+              return (
+                <span key={t} className="flex items-center gap-1.5 rounded-xl bg-fundo px-2.5 py-1.5 text-sm">
+                  <span className="h-2.5 w-2.5 rounded-full" style={{ background: CORES_TIMES[t] }} />
+                  <strong>{NOMES_TIMES[t]}</strong>
+                  <span className="tabular-nums text-apagado">
+                    {v}V {e}E {jogos.length - v - e}D
+                  </span>
+                </span>
+              );
+            })}
+          </div>
+          <div className="flex flex-col text-[13px]">
+            {[...encerradas].reverse().map((p) => (
+              <span key={p.id} className="flex justify-between border-t border-borda py-1">
+                <span className="text-apagado">Jogo {p.numero}</span>
+                <span className="tabular-nums">
+                  {NOMES_TIMES[p.time_a]} <strong>{p.placar_a} × {p.placar_b}</strong> {NOMES_TIMES[p.time_b]}
+                </span>
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Lances e artilharia */}
       <section className="flex flex-col gap-2 rounded-2xl border border-borda bg-white p-4">

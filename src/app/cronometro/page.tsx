@@ -1,26 +1,33 @@
 "use client";
 // Cronômetro simples: funciona só neste aparelho, sem internet, sem sorteio e sem login.
-// Bom pra quando a conexão da quadra está ruim ou não deu tempo de sortear pelo app.
-// O estado fica salvo no aparelho (se fechar e abrir de novo, continua de onde parou).
+// Regressivo; quando zera, NÃO para: mostra "tempo excedido" contando pra cima até alguém pausar.
+// Mostra tempo real × bola rolando × parado, guarda o motivo de cada pausa e o placar do dia.
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { formatarRelogio } from "@/lib/partida";
 
+type Pausa = { inicio: number; fim: number | null; motivo: string | null };
+type Jogo = { nomes: [string, string]; placar: [number, number]; rolando: number; real: number; pausas: number };
+
 type Estado = {
   minutos: number;
   inicio: number | null; // quando começou (ms)
-  pausadoEm: number | null;
-  pausado: number; // ms acumulados parado
+  pausas: Pausa[];
   extra: number; // segundos a mais (+1 min)
+  fim: number | null; // quando encerrou o jogo
   placar: [number, number];
   nomes: [string, string];
+  dia: string; // "AAAA-MM-DD" do histórico abaixo
+  jogos: Jogo[]; // jogos já encerrados hoje
 };
 
-const CHAVE = "masorteio:cronometro";
-const INICIAL: Estado = { minutos: 7, inicio: null, pausadoEm: null, pausado: 0, extra: 0, placar: [0, 0], nomes: ["Time 1", "Time 2"] };
+const CHAVE = "masorteio:cronometro:v2";
+const MOTIVOS = ["Machucou", "Bola longe", "Falta / discussão", "Outro"];
+const hojeIso = () => new Date().toISOString().slice(0, 10);
+const NOVO: Omit<Estado, "dia" | "jogos" | "minutos" | "nomes"> = { inicio: null, pausas: [], extra: 0, fim: null, placar: [0, 0] };
 
 export default function CronometroPage() {
-  const [e, setE] = useState<Estado>(INICIAL);
+  const [e, setE] = useState<Estado>({ ...NOVO, minutos: 7, nomes: ["Time 1", "Time 2"], dia: "", jogos: [] });
   const [agora, setAgora] = useState(0);
   const [telao, setTelao] = useState(false);
   const vibrou = useRef(false);
@@ -29,9 +36,11 @@ export default function CronometroPage() {
     try {
       const raw = window.localStorage.getItem(CHAVE);
       const min = Number(new URLSearchParams(window.location.search).get("min"));
+      const salvo = raw ? (JSON.parse(raw) as Estado) : null;
+      const dia = hojeIso();
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (raw) setE({ ...INICIAL, ...JSON.parse(raw) });
-      else if (min > 0) setE({ ...INICIAL, minutos: min });
+      if (salvo) setE({ ...salvo, ...(salvo.dia !== dia ? { dia, jogos: [] } : {}) });
+      else setE((x) => ({ ...x, dia, minutos: min > 0 ? min : x.minutos }));
     } catch {}
     setAgora(Date.now());
     const t = setInterval(() => setAgora(Date.now()), 250);
@@ -40,11 +49,11 @@ export default function CronometroPage() {
 
   useEffect(() => {
     try {
-      window.localStorage.setItem(CHAVE, JSON.stringify(e));
+      if (e.dia) window.localStorage.setItem(CHAVE, JSON.stringify(e));
     } catch {}
   }, [e]);
 
-  // Tela acesa enquanto o cronômetro existe na tela.
+  // Tela acesa enquanto o cronômetro está aberto.
   useEffect(() => {
     if (!("wakeLock" in navigator)) return;
     let trava: { release: () => Promise<void> } | null = null;
@@ -62,27 +71,34 @@ export default function CronometroPage() {
     };
   }, []);
 
-  const rolando = e.inicio ? Math.max(0, ((e.pausadoEm ?? agora) - e.inicio - e.pausado) / 1000) : 0;
+  const ate = e.fim ?? agora;
+  const aberta = e.pausas.find((p) => !p.fim) ?? null;
+  const parado = e.pausas.reduce((t, p) => t + ((p.fim ?? ate) - p.inicio), 0) / 1000;
+  const real = e.inicio ? Math.max(0, (ate - e.inicio) / 1000) : 0;
+  const rolando = Math.max(0, real - parado);
   const restante = e.minutos * 60 + e.extra - rolando;
-  const status = !e.inicio ? "pronto" : e.pausadoEm ? "pausado" : restante <= 0 ? "fim" : "rolando";
+  const excedido = e.inicio && restante < 0 ? -restante : 0;
+  const status = e.fim ? "fim" : !e.inicio ? "pronto" : aberta ? "pausado" : excedido ? "excedido" : "rolando";
 
   useEffect(() => {
-    if (status === "fim" && !vibrou.current) {
+    if (status === "excedido" && !vibrou.current) {
       vibrou.current = true;
       if (navigator.vibrate) navigator.vibrate([400, 200, 400, 200, 400]);
     }
-    if (status !== "fim") vibrou.current = false;
+    if (status === "pronto") vibrou.current = false;
   }, [status]);
 
   function playPausa() {
     const t = Date.now();
+    if (e.fim) return;
     if (!e.inicio) setE({ ...e, inicio: t });
-    else if (e.pausadoEm) setE({ ...e, pausado: e.pausado + (t - e.pausadoEm), pausadoEm: null });
-    else setE({ ...e, pausadoEm: t });
+    else if (aberta) setE({ ...e, pausas: e.pausas.map((p) => (p === aberta ? { ...p, fim: t } : p)) });
+    else setE({ ...e, pausas: [...e.pausas, { inicio: t, fim: null, motivo: null }] });
   }
 
-  function zerar(manterPlacar = false) {
-    setE({ ...INICIAL, minutos: e.minutos, nomes: e.nomes, placar: manterPlacar ? e.placar : [0, 0] });
+  function motivo(m: string) {
+    if (!aberta) return;
+    setE({ ...e, pausas: e.pausas.map((p) => (p === aberta ? { ...p, motivo: p.motivo === m ? null : m } : p)) });
   }
 
   function gol(lado: 0 | 1, d: number) {
@@ -92,8 +108,35 @@ export default function CronometroPage() {
     if (d > 0 && navigator.vibrate) navigator.vibrate(40);
   }
 
-  const relogio = formatarRelogio(restante);
-  const fim = status === "fim";
+  // Encerra o jogo, guarda no placar do dia e já deixa o próximo pronto.
+  function proximoJogo() {
+    const jogo: Jogo | null = e.inicio ? { nomes: e.nomes, placar: e.placar, rolando, real, pausas: e.pausas.length } : null;
+    setE({ ...e, ...NOVO, jogos: jogo ? [...e.jogos, jogo] : e.jogos });
+  }
+
+  function zerarTudo() {
+    if (!confirm("Apagar o jogo atual e o placar do dia?")) return;
+    setE({ ...e, ...NOVO, jogos: [] });
+  }
+
+  const relogio = excedido ? `+${formatarRelogio(excedido)}` : formatarRelogio(restante);
+  const corRelogio = excedido ? "text-alerta-suave" : "";
+  const rotulo = { pronto: "PRONTO PRA COMEÇAR", pausado: `PAUSADO${aberta?.motivo ? " · " + aberta.motivo.toUpperCase() : ""}`, excedido: "TEMPO ESGOTADO · EXCEDIDO", rolando: "ROLANDO", fim: "ENCERRADO" }[status];
+
+  // Placar do dia por nome de time
+  const tabela = new Map<string, { v: number; e: number; d: number; gp: number }>();
+  for (const j of e.jogos) {
+    j.nomes.forEach((n, k) => {
+      const t = tabela.get(n) ?? { v: 0, e: 0, d: 0, gp: 0 };
+      const meu = j.placar[k];
+      const deles = j.placar[1 - k];
+      if (meu > deles) t.v++;
+      else if (meu === deles) t.e++;
+      else t.d++;
+      t.gp += meu;
+      tabela.set(n, t);
+    });
+  }
 
   if (telao) {
     return (
@@ -104,7 +147,8 @@ export default function CronometroPage() {
           document.exitFullscreen?.().catch(() => {});
         }}
       >
-        <span className={`font-display text-[28vmin] leading-none font-bold tabular-nums ${fim ? "text-alerta-suave" : ""}`}>{relogio}</span>
+        <span className="text-[3vh] font-semibold tracking-widest text-roxo-claro">{rotulo}</span>
+        <span className={`font-display text-[28vmin] leading-none font-bold tabular-nums ${corRelogio}`}>{relogio}</span>
         <div className="flex items-center gap-[6vw] font-display font-bold">
           <span className="flex flex-col items-center">
             <span className="text-[4vmin] text-roxo-claro">{e.nomes[0]}</span>
@@ -141,31 +185,71 @@ export default function CronometroPage() {
       </header>
 
       <section className="flex flex-col items-center gap-3 rounded-3xl bg-noite px-4 pt-4 pb-5 text-white">
-        <span className={`text-xs font-bold tracking-widest ${fim ? "text-alerta-suave" : "text-roxo-claro"}`}>
-          {status === "pronto" ? "PRONTO PRA COMEÇAR" : status === "pausado" ? "PAUSADO" : fim ? "FIM DE JOGO" : "ROLANDO"}
-        </span>
-        <span className={`font-display text-[92px] leading-none font-bold tabular-nums ${fim ? "text-alerta-suave" : ""}`}>{relogio}</span>
-        <div className="grid w-full grid-cols-[1fr_1.6fr_1fr] gap-2">
-          <button type="button" onClick={() => confirm("Zerar o cronômetro e o placar?") && zerar()} className="h-12 rounded-xl bg-white/10 text-sm font-semibold">
-            Zerar
-          </button>
-          <button type="button" onClick={playPausa} className="h-12 rounded-xl bg-roxo text-base font-bold">
-            {status === "pronto" ? "Iniciar" : status === "pausado" ? "Voltar" : "Pausar"}
-          </button>
-          <button type="button" onClick={() => setE({ ...e, extra: e.extra + 60 })} className="h-12 rounded-xl bg-white/10 text-sm font-semibold">
-            +1 min
-          </button>
-        </div>
+        <span className={`text-xs font-bold tracking-widest ${excedido ? "text-alerta-suave" : "text-roxo-claro"}`}>{rotulo}</span>
+        <span className={`font-display text-[88px] leading-none font-bold tabular-nums ${corRelogio}`}>{relogio}</span>
+        {e.inicio && (
+          <div className="grid w-full grid-cols-3 gap-1 text-center text-[11px] text-[#CFC7E0]">
+            <span>
+              Tempo real
+              <br />
+              <strong className="font-display text-sm text-white tabular-nums">{formatarRelogio(real)}</strong>
+            </span>
+            <span>
+              Bola rolando
+              <br />
+              <strong className="font-display text-sm text-white tabular-nums">{formatarRelogio(rolando)}</strong>
+            </span>
+            <span>
+              Parado
+              <br />
+              <strong className="font-display text-sm text-white tabular-nums">{formatarRelogio(parado)}</strong>
+            </span>
+          </div>
+        )}
+        {e.pausas.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-1.5 text-[11px]">
+            {e.pausas.map((p, k) => (
+              <span key={k} className={`rounded-full px-2 py-0.5 ${!p.fim ? "bg-alerta text-white" : "bg-white/10 text-[#CFC7E0]"}`}>
+                ⏸ {p.motivo ?? "sem motivo"} · {formatarRelogio(((p.fim ?? ate) - p.inicio) / 1000)}
+              </span>
+            ))}
+          </div>
+        )}
+        {status !== "fim" && (
+          <div className="grid w-full grid-cols-[1fr_1.6fr_1fr] gap-2">
+            <button type="button" onClick={proximoJogo} className="h-12 rounded-xl bg-white/10 text-sm font-semibold">
+              Encerrar
+            </button>
+            <button type="button" onClick={playPausa} className="h-12 rounded-xl bg-roxo text-base font-bold">
+              {status === "pronto" ? "Iniciar" : status === "pausado" ? "Voltar" : "Pausar"}
+            </button>
+            <button type="button" onClick={() => setE({ ...e, extra: e.extra + 60 })} className="h-12 rounded-xl bg-white/10 text-sm font-semibold">
+              +1 min
+            </button>
+          </div>
+        )}
+        {status === "pausado" && (
+          <div className="flex w-full flex-col gap-1.5">
+            <span className="text-xs text-[#CFC7E0]">Motivo da pausa (opcional)</span>
+            <div className="flex flex-wrap gap-1.5">
+              {MOTIVOS.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => motivo(m)}
+                  className={`h-8 rounded-full border px-3 text-[13px] font-semibold ${aberta?.motivo === m ? "border-roxo bg-roxo" : "border-white/20"}`}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         {status === "pronto" && (
           <div className="flex items-center gap-2 text-sm">
             <span className="text-[#CFC7E0]">Minutos:</span>
             {[5, 7, 8, 10, 12, 15].map((m) => (
-              <button
-                key={m}
-                type="button"
-                onClick={() => setE({ ...e, minutos: m })}
-                className={`h-9 w-9 rounded-lg font-semibold ${e.minutos === m ? "bg-roxo" : "bg-white/10"}`}
-              >
+              <button key={m} type="button" onClick={() => setE({ ...e, minutos: m })} className={`h-9 w-9 rounded-lg font-semibold ${e.minutos === m ? "bg-roxo" : "bg-white/10"}`}>
                 {m}
               </button>
             ))}
@@ -200,11 +284,46 @@ export default function CronometroPage() {
         ))}
       </section>
 
-      <button type="button" onClick={() => zerar(false)} className="h-12 rounded-xl border border-borda bg-white font-semibold">
-        Próximo jogo (zera tempo e placar)
+      <button type="button" onClick={proximoJogo} className="h-12 rounded-xl bg-noite font-semibold text-white">
+        Encerrar e começar o próximo jogo
       </button>
+
+      {e.jogos.length > 0 && (
+        <section className="flex flex-col gap-2 rounded-2xl border border-borda bg-white p-4">
+          <span className="text-xs font-bold tracking-wider text-apagado">PLACAR DO DIA (NESTE APARELHO)</span>
+          <div className="flex flex-wrap gap-2">
+            {[...tabela.entries()]
+              .sort((a, b) => b[1].v - a[1].v || b[1].gp - a[1].gp)
+              .map(([n, t]) => (
+                <span key={n} className="rounded-xl bg-fundo px-2.5 py-1.5 text-sm">
+                  <strong>{n}</strong>{" "}
+                  <span className="tabular-nums text-apagado">
+                    {t.v}V {t.e}E {t.d}D
+                  </span>
+                </span>
+              ))}
+          </div>
+          {[...e.jogos].reverse().map((j, k) => (
+            <span key={k} className="flex justify-between border-t border-borda py-1 text-[13px]">
+              <span className="text-apagado">
+                Jogo {e.jogos.length - k} · {formatarRelogio(j.rolando)} rolando
+              </span>
+              <span className="tabular-nums">
+                {j.nomes[0]} <strong>{j.placar[0]} × {j.placar[1]}</strong> {j.nomes[1]}
+              </span>
+            </span>
+          ))}
+          <button type="button" onClick={zerarTudo} className="self-start text-xs font-semibold text-alerta underline">
+            Apagar o placar do dia
+          </button>
+        </section>
+      )}
+
       <p className="text-center text-xs text-apagado">
-        Este cronômetro não salva os gols no campeonato. Pra isso, use a partida ao vivo depois do sorteio. <Link href="/" className="font-semibold text-roxo">Início</Link>
+        Este cronômetro não salva no campeonato. Pra isso, use a partida ao vivo depois do sorteio.{" "}
+        <Link href="/" className="font-semibold text-roxo">
+          Início
+        </Link>
       </p>
     </main>
   );

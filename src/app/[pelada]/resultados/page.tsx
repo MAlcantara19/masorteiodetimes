@@ -177,6 +177,18 @@ export default function ResultadosPage() {
                 ))}
               </div>
             )}
+            {(() => {
+              const pz = d.pausas.filter((x) => x.partida_id === p.id && x.fim);
+              if (!pz.length) return null;
+              const seg = pz.reduce((t, x) => t + (new Date(x.fim as string).getTime() - new Date(x.inicio).getTime()) / 1000, 0);
+              const motivos = [...new Set(pz.map((x) => x.motivo).filter(Boolean))];
+              return (
+                <span className="text-xs text-apagado">
+                  ⏸ {pz.length} {pz.length === 1 ? "pausa" : "pausas"} · {Math.floor(seg / 60)}:{String(Math.round(seg % 60)).padStart(2, "0")} parado
+                  {motivos.length ? ` (${motivos.join(", ")})` : ""}
+                </span>
+              );
+            })()}
             {semAutor > 0 && <span className="text-xs font-semibold text-alerta-escuro">{semAutor === 1 ? "1 gol sem autor" : `${semAutor} gols sem autor`}: toca em Corrigir</span>}
           </section>
         );
