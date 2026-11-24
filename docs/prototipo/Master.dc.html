@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Painel master</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7444D6}a:hover{color:#4F2A9E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F6F4FA; font-family: Inter, system-ui, sans-serif; color: #121412">
+  <div style="height: 844px; overflow-y: auto; box-sizing: border-box; padding: 52px 18px 30px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 13px; color: #5B5570">Só você vê esta tela</span>
+        <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700">Painel master</h1>
+      </div>
+      <span style="font-size: 12px; font-weight: 700; background: #1B1430; color: #C9B2FF; padding: 6px 10px; border-radius: 99px">MASTER</span>
+    </div>
+
+    <div role="tablist" aria-label="Peladas" style="display: flex; gap: 6px; flex-wrap: wrap">
+      <sc-for list="{{ peladas }}" as="p" hint-placeholder-count="3">
+        <button role="tab" aria-selected="{{ p.sel }}" onClick="{{ p.go }}" style="height: 36px; padding: 0 12px; border-radius: 99px; border: 1.5px solid {{ p.border }}; background: {{ p.bg }}; color: {{ p.fg }}; font: inherit; font-size: 13px; font-weight: 600">{{ p.n }}</button>
+      </sc-for>
+    </div>
+
+    <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <span style="font-size: 15px; font-weight: 600">Admins da {{ curName }}</span>
+        <span style="font-size: 12px; color: #5B5570">{{ adminCount }}</span>
+      </div>
+      <sc-for list="{{ admins }}" as="a" hint-placeholder-count="2">
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 44px">
+          <span style="width: 34px; height: 34px; border-radius: 17px; background: #EFE8FC; color: #4F2A9E; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px">{{ a.ini }}</span>
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 14px; font-weight: 600">{{ a.n }}</span><span style="font-size: 12px; color: #5B5570">{{ a.mail }}</span></span>
+          <button onClick="{{ a.remove }}" style="height: 34px; padding: 0 10px; border-radius: 10px; border: 1px solid #E6E1EF; background: #fff; font: inherit; font-size: 12px; font-weight: 600; color: #8A3508">Remover</button>
+        </div>
+      </sc-for>
+      <div style="display: grid; grid-template-columns: 1fr auto; gap: 8px; border-top: 1px solid #F0ECF6; padding-top: 10px">
+        <label style="display: flex"><span style="position: absolute; width: 1px; height: 1px; overflow: hidden">E-mail do novo admin</span>
+          <input type="email" placeholder="e-mail do novo admin" style="flex: 1; min-width: 0; height: 42px; border-radius: 10px; border: 1px solid #D8D0E6; padding: 0 10px; font: inherit; font-size: 14px">
+        </label>
+        <button style="height: 42px; padding: 0 12px; border-radius: 10px; border: none; background: #7444D6; color: #fff; font: inherit; font-size: 13px; font-weight: 600">Gerar senha</button>
+      </div>
+    </div>
+
+    <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 15px; font-weight: 600">Entraram com Google</span>
+      <sc-for list="{{ users }}" as="u" hint-placeholder-count="3">
+        <div style="display: flex; align-items: center; gap: 10px; min-height: 44px">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 1px"><span style="font-size: 14px; font-weight: 600">{{ u.n }}</span><span style="font-size: 12px; color: #5B5570">{{ u.mail }} · jogador</span></span>
+          <button onClick="{{ u.promote }}" style="height: 34px; padding: 0 10px; border-radius: 10px; border: 1.5px solid #7444D6; background: #fff; font: inherit; font-size: 12px; font-weight: 600; color: #4F2A9E">Tornar admin</button>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="background: #1B1430; color: #F3F0F8; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <span style="font-size: 15px; font-weight: 600">Duplas que mais caem juntas</span>
+        <span style="font-size: 11px; color: #C9B2FF; font-weight: 700">SÓ MASTER</span>
+      </div>
+      <span style="font-size: 12px; color: #B9AFCB">Sorteios oficiais de novembro</span>
+      <sc-for list="{{ pairs }}" as="p" hint-placeholder-count="4">
+        <div style="display: flex; align-items: center; gap: 10px; font-size: 14px">
+          <span style="flex: 1">{{ p.n }}</span>
+          <span style="width: 80px; height: 6px; background: #33284D; border-radius: 99px; overflow: hidden"><span style="display: block; height: 6px; width: {{ p.w }}; background: #C9B2FF"></span></span>
+          <span style="width: 54px; text-align: right; font-weight: 600">{{ p.v }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { cur: 'Bola Fora',
+      admins: { 'Bola Fora': [['Matheus Alcântara', 'master'], ['Biel', 'biel@…']], 'Artilheiros do Copo': [['Renan', 'renan@…']], 'Terça dos conhecidos': [] },
+      users: [['Ycaro', 'ycaro@…'], ['Peterson', 'peterson@…'], ['Lulu', 'lulu@…']] };
+  }
+  renderVals() {
+    const st = this.state;
+    const peladas = Object.keys(st.admins).map((n) => {
+      const on = n === st.cur;
+      return { n, sel: on ? 'true' : 'false', bg: on ? '#1B1430' : '#fff', fg: on ? '#fff' : '#121412', border: on ? '#1B1430' : '#D8D0E6',
+        go: () => this.setState({ cur: n }) };
+    });
+    const list = st.admins[st.cur];
+    const admins = list.map(([n, mail]) => ({ n, mail: mail === 'master' ? 'master · todas as peladas' : mail,
+      ini: n.split(' ').map((w) => w[0]).slice(0, 2).join(''),
+      remove: () => { if (mail === 'master') return; this.setState({ admins: { ...st.admins, [st.cur]: list.filter((x) => x[0] !== n) } }); } }));
+    const users = st.users.map(([n, mail]) => ({ n, mail,
+      promote: () => this.setState({ users: st.users.filter((x) => x[0] !== n), admins: { ...st.admins, [st.cur]: list.concat([[n, mail]]) } }) }));
+    const pairs = [['Biel + Ramir', 9], ['Lulu + Lucas Budziak', 7], ['Taffarel + Marcelão', 6], ['Thiago + Fubuia', 3]]
+      .map(([n, v]) => ({ n, v: v + ' de 10', w: v * 10 + '%' }));
+    return { peladas, curName: st.cur, admins, adminCount: list.length + (list.length === 1 ? ' admin' : ' admins'), users, pairs };
+  }
+}
+</script>
+</body>
+</html>

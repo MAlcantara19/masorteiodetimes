@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Craque e bagre da pelada</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7444D6}a:hover{color:#4F2A9E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F6F4FA; font-family: Inter, system-ui, sans-serif; color: #121412">
+  <div style="height: 844px; overflow-y: auto; box-sizing: border-box; padding: 52px 20px 100px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 13px; color: #5B6159">Segunda · 23/11 · {{ voted }} de 19 votaram</span>
+      <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700">Votação da pelada</h1>
+    </div>
+
+    <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 10px">
+      <span style="flex: 1; font-size: 13px; color: #3A3F39">Cada um vota pelo link, sem login. Fecha às 23h.</span>
+      <button style="height: 40px; padding: 0 12px; border-radius: 12px; border: none; background: #1A8F4E; color: #fff; font: inherit; font-size: 13px; font-weight: 600">Mandar link</button>
+    </div>
+
+    <sc-for list="{{ boxes }}" as="b" hint-placeholder-count="2">
+      <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <span style="font-family: 'Space Grotesk', sans-serif; font-size: 18px; font-weight: 700; color: {{ b.color }}">{{ b.title }}</span>
+          <span style="font-size: 12px; color: #5B6159">{{ b.sub }}</span>
+        </div>
+        <sc-for list="{{ b.rows }}" as="r" hint-placeholder-count="5">
+          <button onClick="{{ r.pick }}" aria-pressed="{{ r.pressed }}" style="position: relative; height: 44px; border-radius: 10px; border: 1.5px solid {{ r.border }}; background: #fff; overflow: hidden; font: inherit; padding: 0; text-align: left; color: #121412">
+            <span style="position: absolute; left: 0; top: 0; bottom: 0; width: {{ r.w }}; background: {{ r.fill }}"></span>
+            <span style="position: relative; display: flex; justify-content: space-between; align-items: center; height: 100%; padding: 0 12px; font-size: 14px">
+              <span style="font-weight: {{ r.weight }}">{{ r.n }}</span>
+              <span style="font-size: 13px; font-weight: 600">{{ r.v }}</span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+    </sc-for>
+  </div>
+
+  <nav aria-label="Navegação principal" style="position: absolute; left: 0; right: 0; bottom: 0; height: 78px; background: #fff; border-top: 1px solid #E6E1EF; display: flex; justify-content: space-around; align-items: flex-start; padding-top: 10px">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: #5B6159; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21H3z"/></svg>Início</a>
+    <a href="Jogadores.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: #5B6159; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2.2.6 3.5 2.6 3.5 6"/></svg>Jogadores</a>
+    <a href="Sorteio.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: #5B6159; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h4l10 12h4M3 18h4l3-3.6M14 9.6 17 6h4M18 3l3 3-3 3M18 15l3 3-3 3"/></svg>Sorteio</a>
+    <a href="Partida.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: #5B6159; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>Partida</a>
+    <a href="Mais.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #7444D6; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Mais</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { craque: null, bagre: null }; }
+  renderVals() {
+    const base = {
+      craque: [['Lulu', 5], ['Renan', 3], ['Thiago Bromana', 2], ['Ramir', 1], ['Biel', 1]],
+      bagre: [['Fubuia', 4], ['Bruninho', 3], ['Marcelão', 2], ['Peterson', 2], ['Moisés', 1]]
+    };
+    const cfg = {
+      craque: { title: 'Craque da pelada', color: '#4F2A9E', fill: '#EFE8FC', ring: '#7444D6' },
+      bagre: { title: 'Bagre da pelada', color: '#8A3508', fill: '#FCEBDD', ring: '#B4460B' }
+    };
+    const boxes = ['craque', 'bagre'].map((k) => {
+      const mine = this.state[k];
+      const rows0 = base[k].map(([n, v]) => [n, v + (mine === n ? 1 : 0)]);
+      const total = rows0.reduce((a, r) => a + r[1], 0);
+      const max = Math.max.apply(null, rows0.map((r) => r[1]));
+      const rows = rows0.map(([n, v]) => ({
+        n, v: v + (v === 1 ? ' voto' : ' votos'), w: Math.round((v / max) * 100) + '%',
+        fill: cfg[k].fill, border: mine === n ? cfg[k].ring : '#E6E1EF', weight: mine === n ? '700' : '500',
+        pressed: mine === n ? 'true' : 'false',
+        pick: () => this.setState({ [k]: n })
+      }));
+      return { title: cfg[k].title, color: cfg[k].color, rows, sub: mine ? 'Seu voto: ' + mine : 'Toca pra votar' };
+    });
+    const voted = 12 + (this.state.craque || this.state.bagre ? 1 : 0);
+    return { boxes, voted };
+  }
+}
+</script>
+</body>
+</html>

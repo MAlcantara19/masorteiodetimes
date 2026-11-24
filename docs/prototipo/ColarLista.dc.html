@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Colar lista do WhatsApp</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7444D6}a:hover{color:#4F2A9E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F6F4FA; font-family: Inter, system-ui, sans-serif; color: #121412">
+  <div style="padding: 52px 20px 110px; display: flex; flex-direction: column; gap: 16px">
+    <div style="display: flex; align-items: center; gap: 8px">
+      <a href="Main.dc.html" aria-label="Voltar" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #121412; margin-left: -10px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
+      <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700">Colar lista</h1>
+    </div>
+
+    <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <span style="font-size: 12px; font-weight: 600; color: #5B6159">MENSAGEM COLADA</span>
+        <span style="font-size: 12px; color: #7444D6; font-weight: 600">Limpar</span>
+      </div>
+      <div style="font-family: ui-monospace, Menlo, monospace; font-size: 11.5px; line-height: 1.45; color: #3A3F39; white-space: pre-line; max-height: 150px; overflow: hidden; background: #F6F4FA; border-radius: 10px; padding: 10px">Pelada 23/11/2026
+Horário: 18:30 até 20:30
+1 - Thiago Bromana
+2 - João Guilherme
+3 - Fubuia
+4 - Ramir
+5 -  Felipe
+…
+Goleiros
+1-Tilu  2-Tiago  3- Alcântara
+Suplentes
+1-Ycaro  2-  3-</div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+      <div style="background: #EFE8FC; border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px"><span style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: #4F2A9E">15</span><span style="font-size: 11px; color: #4F2A9E">linha</span></div>
+      <div style="background: #EFE8FC; border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px"><span style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: #4F2A9E">3</span><span style="font-size: 11px; color: #4F2A9E">goleiros</span></div>
+      <div style="background: #EFE8FC; border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px"><span style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: #4F2A9E">1</span><span style="font-size: 11px; color: #4F2A9E">suplente</span></div>
+      <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 12px; padding: 10px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px"><span style="font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; padding-top: 4px">18:30</span><span style="font-size: 11px; color: #5B6159">horário</span></div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <h2 style="margin: 0; font-size: 13px; font-weight: 600; color: #5B6159">Confirma esses 3, por favor</h2>
+      <sc-for list="{{ matches }}" as="m" hint-placeholder-count="3">
+        <div style="background: #fff; border: 1px solid #F3C9A8; border-radius: 14px; padding: 12px 14px; display: flex; align-items: center; gap: 10px">
+          <div style="display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0">
+            <span style="font-size: 15px; font-weight: 600">{{ m.typed }}</span>
+            <span style="font-size: 12px; color: #5B6159">{{ m.hint }}</span>
+          </div>
+          <button onClick="{{ m.pick }}" style="height: 36px; padding: 0 12px; border-radius: 10px; border: 1px solid {{ m.border }}; background: {{ m.bg }}; color: {{ m.fg }}; font: inherit; font-size: 13px; font-weight: 600">{{ m.label }}</button>
+        </div>
+      </sc-for>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 6px">
+      <h2 style="margin: 0; font-size: 13px; font-weight: 600; color: #5B6159">Reconhecidos automaticamente · 12</h2>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px">
+        <sc-for list="{{ ok }}" as="n" hint-placeholder-count="12">
+          <span style="font-size: 13px; background: #fff; border: 1px solid #E6E1EF; border-radius: 99px; padding: 6px 10px">{{ n }}</span>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 20px 26px; background: #F6F4FA; border-top: 1px solid #E6E1EF">
+    <a href="Sorteio.dc.html" style="display: flex; align-items: center; justify-content: center; height: 54px; border-radius: 16px; background: #7444D6; color: #fff; text-decoration: none; font-size: 16px; font-weight: 600">Confirmar e ir pro sorteio</a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { done: {} }; }
+  renderVals() {
+    const base = [
+      { id: 'felipe', typed: 'Felipe', hint: 'Parece “Feliph” do elenco', yes: 'É o Feliph' },
+      { id: 'joao', typed: 'João Guilherme', hint: 'Parece “João Guilherme Rayan”', yes: 'É ele' },
+      { id: 'peterson', typed: 'Peterson', hint: 'Novo · entra com nota padrão 3★', yes: 'Cadastrar' }
+    ];
+    const matches = base.map((m) => {
+      const d = !!this.state.done[m.id];
+      return { ...m, label: d ? 'Ok ✓' : m.yes, bg: d ? '#EFE8FC' : '#fff', fg: d ? '#4F2A9E' : '#B4460B', border: d ? '#EFE8FC' : '#B4460B',
+        pick: () => this.setState({ done: { ...this.state.done, [m.id]: true } }) };
+    });
+    const ok = ['Thiago Bromana', 'Fubuia', 'Ramir', 'Taffarel', 'Marcelão', 'Renan Tarcitano', 'Lucas Budziak', 'Giliard (Conv.)', 'Moisés', 'Bruninho', 'Lulu', 'Biel'];
+    return { matches, ok };
+  }
+}
+</script>
+</body>
+</html>

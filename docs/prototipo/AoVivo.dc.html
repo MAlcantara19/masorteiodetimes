@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Ao vivo — link da pelada</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#C9B2FF}a:hover{color:#fff}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #140F22; font-family: Inter, system-ui, sans-serif; color: #F3F0F8">
+  <div style="height: 844px; overflow-y: auto; box-sizing: border-box; padding: 48px 16px 28px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700">Bola Fora <span style="color: #C9B2FF">ao vivo</span></span>
+        <span style="font-size: 12px; color: #B9AFCB">masorteio.app/bolafora · qualquer um com o link</span>
+      </div>
+      <span style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; background: #E0464B; color: #fff; padding: 5px 10px; border-radius: 99px"><span style="width: 7px; height: 7px; border-radius: 4px; background: #fff"></span>AO VIVO</span>
+    </div>
+
+    <div style="display: flex; gap: 6px; flex-wrap: wrap; font-size: 12px; color: #CFC7E0">
+      <span style="background: #241C38; padding: 5px 10px; border-radius: 99px">11 pessoas vendo</span>
+      <span style="background: #241C38; padding: 5px 10px; border-radius: 99px">Atualizando agora: Ycaro, Peterson</span>
+    </div>
+
+    <div role="tablist" aria-label="Seções ao vivo" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: #241C38; border-radius: 12px; padding: 4px; gap: 4px">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+        <button role="tab" aria-selected="{{ t.sel }}" onClick="{{ t.go }}" style="height: 38px; border: none; border-radius: 9px; font: inherit; font-size: 13px; font-weight: 600; background: {{ t.bg }}; color: {{ t.fg }}">{{ t.label }}</button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ isGame }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 12px">
+        <div style="background: #1E1630; border: 1px solid #33284D; border-radius: 18px; padding: 14px; display: flex; flex-direction: column; align-items: center; gap: 10px">
+          <span style="font-size: 12px; font-weight: 600; color: #B9AFCB">JOGO 3 · Próximo: Time 3</span>
+          <span style="font-family: 'Space Grotesk', sans-serif; font-size: 84px; line-height: 1; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -2px">{{ clock }}</span>
+          <div style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; width: 100%">
+            <span style="font-size: 16px; font-weight: 600; text-align: center">Time 1</span>
+            <span style="font-family: 'Space Grotesk', sans-serif; font-size: 48px; font-weight: 700; font-variant-numeric: tabular-nums">{{ s1 }} × {{ s2 }}</span>
+            <span style="font-size: 16px; font-weight: 600; text-align: center">Time 2</span>
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; width: 100%">
+            <button onClick="{{ g1 }}" style="height: 48px; border-radius: 12px; border: none; background: #7444D6; color: #fff; font: inherit; font-size: 15px; font-weight: 600">+ Gol Time 1</button>
+            <button onClick="{{ g2 }}" style="height: 48px; border-radius: 12px; border: none; background: #3B6BE0; color: #fff; font: inherit; font-size: 15px; font-weight: 600">+ Gol Time 2</button>
+          </div>
+          <button onClick="{{ toggle }}" style="width: 100%; height: 44px; border-radius: 12px; border: 1px solid #4A3D66; background: transparent; color: #F3F0F8; font: inherit; font-size: 14px; font-weight: 600">{{ playLabel }}</button>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 12px; font-weight: 600; color: #B9AFCB">LANCES</span>
+          <sc-for list="{{ feed }}" as="f" hint-placeholder-count="3">
+            <div style="display: flex; justify-content: space-between; font-size: 14px; background: #1E1630; border-radius: 10px; padding: 10px 12px">
+              <span>{{ f.txt }}</span><span style="color: #B9AFCB; font-size: 12px">{{ f.by }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isScorers }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div role="group" aria-label="Período" style="display: flex; gap: 6px">
+          <button onClick="{{ setDay }}" style="height: 34px; padding: 0 12px; border-radius: 99px; border: 1px solid #4A3D66; background: {{ dayBg }}; color: #F3F0F8; font: inherit; font-size: 13px; font-weight: 600">Hoje</button>
+          <button onClick="{{ setMonth }}" style="height: 34px; padding: 0 12px; border-radius: 99px; border: 1px solid #4A3D66; background: {{ monthBg }}; color: #F3F0F8; font: inherit; font-size: 13px; font-weight: 600">Novembro</button>
+        </div>
+        <div style="background: #1E1630; border-radius: 14px; padding: 4px 14px">
+          <sc-for list="{{ scorers }}" as="s" hint-placeholder-count="6">
+            <div style="display: flex; align-items: center; gap: 10px; min-height: 44px; border-bottom: 1px solid #2C2342; font-size: 15px">
+              <span style="width: 20px; color: #B9AFCB; font-weight: 700">{{ s.pos }}</span>
+              <span style="flex: 1">{{ s.n }}</span>
+              <span style="font-family: 'Space Grotesk', sans-serif; font-weight: 700">{{ s.g }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isQueue }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <div style="background: #1E1630; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 12px; color: #B9AFCB">EM CAMPO</span><span style="font-size: 16px; font-weight: 600">Time 1 × Time 2</span>
+        </div>
+        <div style="background: #1E1630; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px">
+          <span style="font-size: 12px; color: #B9AFCB">PRÓXIMO</span><span style="font-size: 16px; font-weight: 600">Time 3</span>
+        </div>
+        <div style="background: #1E1630; border-radius: 14px; padding: 12px 14px; display: flex; flex-direction: column; gap: 6px; font-size: 14px">
+          <span style="font-size: 12px; color: #B9AFCB">VITÓRIAS HOJE</span>
+          <div style="display: flex; justify-content: space-between"><span>Time 1</span><span style="font-weight: 700">1</span></div>
+          <div style="display: flex; justify-content: space-between"><span>Time 3</span><span style="font-weight: 700">1</span></div>
+          <div style="display: flex; justify-content: space-between"><span>Time 2</span><span style="font-weight: 700">0</span></div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { tab: 'game', secs: 252, running: false, s: [1, 0], period: 'day',
+    feed: [{ txt: 'Gol do Time 1: Ramir', by: 'por Ycaro · 2\'' }] }; }
+  componentWillUnmount() { clearInterval(this.t); }
+  renderVals() {
+    const st = this.state;
+    const tabs = [['game', 'Jogo'], ['scorers', 'Artilharia'], ['queue', 'Fila']].map(([id, label]) => ({
+      label, sel: st.tab === id ? 'true' : 'false', bg: st.tab === id ? '#7444D6' : 'transparent', fg: '#fff',
+      go: () => this.setState({ tab: id }) }));
+    const goal = (i) => () => {
+      const s = st.s.slice(); s[i]++;
+      const min = Math.floor((420 - st.secs) / 60) + 1;
+      this.setState({ s, feed: [{ txt: 'Gol do Time ' + (i + 1), by: 'por você · ' + min + '\'' }].concat(st.feed) });
+    };
+    const day = [['Renan', 1], ['Biel', 1], ['Taffarel', 1], ['Gilliard', 1], ['Ramir', 1]];
+    const month = [['Renan', 14], ['Lulu', 11], ['Thiago Bromana', 10], ['Ramir', 8], ['Biel', 7], ['Lucas Budziak', 6]];
+    const scorers = (st.period === 'day' ? day : month).map(([n, g], i) => ({ pos: i + 1, n, g }));
+    return {
+      tabs, isGame: st.tab === 'game', isScorers: st.tab === 'scorers', isQueue: st.tab === 'queue',
+      clock: Math.floor(st.secs / 60) + ':' + String(st.secs % 60).padStart(2, '0'),
+      s1: st.s[0], s2: st.s[1], g1: goal(0), g2: goal(1), feed: st.feed,
+      playLabel: st.running ? 'Pausar cronômetro (pra todo mundo)' : 'Iniciar cronômetro (pra todo mundo)',
+      toggle: () => {
+        if (st.running) { clearInterval(this.t); this.setState({ running: false }); return; }
+        this.t = setInterval(() => this.setState({ secs: Math.max(0, this.state.secs - 1) }), 1000);
+        this.setState({ running: true });
+      },
+      scorers, dayBg: st.period === 'day' ? '#7444D6' : 'transparent', monthBg: st.period === 'month' ? '#7444D6' : 'transparent',
+      setDay: () => this.setState({ period: 'day' }), setMonth: () => this.setState({ period: 'month' })
+    };
+  }
+}
+</script>
+</body>
+</html>

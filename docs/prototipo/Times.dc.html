@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Times sorteados</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7444D6}a:hover{color:#4F2A9E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #EEEAF4; font-family: Inter, system-ui, sans-serif; color: #121412">
+  <div style="background: #1B1430; color: #fff; padding: 46px 14px 12px; display: flex; align-items: center; gap: 8px">
+    <a href="Sorteio.dc.html" aria-label="Voltar" style="width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; color: #fff; margin-left: -6px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 6-6 6 6 6"/></svg></a>
+    <div style="flex: 1; display: flex; flex-direction: column; gap: 1px">
+      <span style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700">MA <span style="color: #C9B2FF">Sorteio</span></span>
+      <span style="font-size: 12px; color: #CFC7E0">Bola Fora · segunda 23/11</span>
+    </div>
+    <button onClick="{{ toggleNotes }}" aria-pressed="{{ notesAria }}" style="height: 36px; padding: 0 10px; border-radius: 99px; border: 1px solid #6B6185; background: {{ notesBg }}; color: #fff; font: inherit; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>
+      Notas
+    </button>
+  </div>
+
+  <div style="height: 684px; overflow-y: auto; box-sizing: border-box; padding: 12px 12px 160px; display: flex; flex-direction: column; gap: 10px">
+    <div role="tablist" aria-label="Sorteios" style="display: flex; gap: 6px; flex-wrap: wrap">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="2">
+        <span style="display: flex; align-items: center; height: 38px; border-radius: 99px; border: 1.5px solid {{ t.border }}; background: {{ t.bg }}; overflow: hidden">
+          <button role="tab" aria-selected="{{ t.sel }}" onClick="{{ t.go }}" style="height: 38px; padding: 0 4px 0 12px; border: none; background: transparent; color: {{ t.fg }}; font: inherit; font-size: 13px; font-weight: 600">{{ t.label }}</button>
+          <button onClick="{{ t.close }}" aria-label="{{ t.closeLabel }}" style="width: 30px; height: 38px; border: none; background: transparent; color: {{ t.fg }}; display: flex; align-items: center; justify-content: center; padding: 0"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        </span>
+      </sc-for>
+      <button onClick="{{ addDraw }}" aria-label="Fazer mais um sorteio" style="height: 38px; padding: 0 12px; border-radius: 99px; border: 1.5px dashed #6B6185; background: transparent; font: inherit; font-size: 13px; font-weight: 600; color: #3A3450">+ Sortear</button>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px">
+      <div role="group" aria-label="Formato da imagem" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: #E2DCEC; border-radius: 10px; padding: 3px; gap: 3px">
+        <button onClick="{{ setVert }}" style="height: 32px; border: none; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 600; background: {{ vertBg }}; color: #121412">Vertical</button>
+        <button onClick="{{ setSquare }}" style="height: 32px; border: none; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 600; background: {{ squareBg }}; color: #121412">Quadrada</button>
+      </div>
+      <div role="group" aria-label="Fundo da imagem" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: #E2DCEC; border-radius: 10px; padding: 3px; gap: 3px">
+        <button onClick="{{ setLight }}" style="height: 32px; border: none; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 600; background: {{ lightBg }}; color: #121412">Claro</button>
+        <button onClick="{{ setDark }}" style="height: 32px; border: none; border-radius: 8px; font: inherit; font-size: 12px; font-weight: 600; background: {{ darkBg }}; color: #121412">Escuro</button>
+      </div>
+    </div>
+
+    <sc-if value="{{ hasAlert }}" hint-placeholder-val="{{ false }}">
+      <div role="status" style="display: flex; gap: 8px; align-items: flex-start; background: #FCEBDD; color: #8A3508; border-radius: 10px; padding: 8px 10px; font-size: 12px; font-weight: 600">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink: 0; margin-top: 1px"><path d="M12 3 2 21h20z"/><path d="M12 10v5M12 18h.01"/></svg>
+        <span>{{ alert }}</span>
+      </div>
+    </sc-if>
+
+    <span style="font-size: 12px; color: #3A3450">{{ hint }}</span>
+
+    <div style="background: {{ cardBg }}; border-radius: 6px; overflow: hidden; box-shadow: 0 1px 3px rgba(18,20,18,0.14)">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; padding: 10px 12px 8px">
+        <span style="font-family: 'Space Grotesk', sans-serif; font-size: 20px; font-weight: 700; color: {{ titleFg }}">Bola Fora</span>
+        <span style="font-size: 13px; color: {{ subFg }}; font-weight: 600">{{ cardLabel }}</span>
+      </div>
+
+      <sc-if value="{{ isVert }}" hint-placeholder-val="{{ true }}">
+        <div>
+          <sc-for list="{{ teams }}" as="t" hint-placeholder-count="3">
+            <div>
+              <div style="display: flex; align-items: center; gap: 8px; padding: 4px 10px; background: {{ band }}; color: #fff">
+                <span style="font-size: 24px; font-weight: 500; flex: 1">{{ t.name }}</span>
+                <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ false }}">
+                  <span style="font-size: 12px; font-weight: 600; background: rgba(0,0,0,0.25); padding: 3px 8px; border-radius: 99px">★{{ t.sum }} · {{ t.pos }}</span>
+                </sc-if>
+              </div>
+              <div style="display: flex; flex-direction: column; padding: 2px 0 4px">
+                <sc-for list="{{ t.players }}" as="p" hint-placeholder-count="5">
+                  <button onClick="{{ p.tap }}" style="display: flex; justify-content: space-between; align-items: center; min-height: 34px; padding: 0 10px; border: none; background: {{ p.bg }}; font: inherit; text-align: left; color: {{ nameFg }}">
+                    <span style="font-size: 22px; line-height: 1.3">{{ p.n }}</span>
+                    <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ false }}">
+                      <span style="font-size: 12px; color: {{ subFg }}; font-weight: 600">{{ p.pos }} · {{ p.s }}</span>
+                    </sc-if>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isSquare }}" hint-placeholder-val="{{ false }}">
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; padding: 0 8px 4px">
+          <sc-for list="{{ teams }}" as="t" hint-placeholder-count="3">
+            <div style="display: flex; flex-direction: column">
+              <div style="padding: 4px 8px; background: {{ band }}; color: #fff; font-size: 16px; font-weight: 600; border-radius: 4px 4px 0 0">{{ t.name }}</div>
+              <sc-if value="{{ showNotes }}" hint-placeholder-val="{{ true }}">
+                <div style="padding: 4px 8px; background: #F1E8FF; color: #4F2A9E; font-size: 12px; font-weight: 700">média ★{{ t.avg }}</div>
+              </sc-if>
+              <sc-for list="{{ t.players }}" as="p" hint-placeholder-count="5">
+                <button onClick="{{ p.tap }}" style="min-height: 30px; padding: 0 6px; border: none; background: {{ p.bg }}; font: inherit; text-align: left; color: {{ nameFg }}; font-size: 13px; line-height: 1.2">{{ p.short }}</button>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+      </sc-if>
+
+      <div style="text-align: center; font-size: 12px; color: {{ footFg }}; padding: 6px 0 10px; font-weight: 500">Times gerados pelo MA Sorteio</div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 10px 12px 22px; background: #EEEAF4; border-top: 1px solid #D8D0E6; display: flex; flex-direction: column; gap: 8px">
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+      <button style="height: 46px; border-radius: 14px; border: 1.5px solid #1B1430; background: #fff; font: inherit; font-size: 14px; font-weight: 600; color: #121412; display: flex; align-items: center; justify-content: center; gap: 6px">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14"/></svg>
+        {{ downloadLabel }}
+      </button>
+      <button style="height: 46px; border-radius: 14px; border: none; background: #1A8F4E; color: #fff; font: inherit; font-size: 14px; font-weight: 600">Mandar no Zap</button>
+    </div>
+    <div style="display: grid; grid-template-columns: 1fr 52px; gap: 8px">
+      <button onClick="{{ markOfficial }}" style="height: 46px; border-radius: 14px; border: none; background: {{ offBg }}; color: #fff; font: inherit; font-size: 14px; font-weight: 600">{{ offLabel }}</button>
+      <button onClick="{{ undo }}" aria-label="Desfazer última troca" style="height: 46px; border-radius: 14px; border: 1.5px solid #D8D0E6; background: #fff; color: {{ undoFg }}; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"band":{"editor":"color","default":"#7444D6","options":["#7444D6","#F0605C","#1D4ED8","#1B1430"]},"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    const a = this.draw(), b = this.draw();
+    this.state = { draws: [{ id: 1, t: a }, { id: 2, t: b }], next: 3, cur: 0, notes: true, picked: null,
+      history: [], official: null, fmt: 'square', dark: false };
+  }
+  data() {
+    return { 'Thiago Bromana': [4, 'A'], 'João Guilherme Rayan': [3.5, 'M'], 'Fubuia': [2, 'D'], 'Ramir': [3.5, 'Q'], 'Felipe': [3, 'A'],
+      'Taffarel': [3.5, 'D'], 'Marcelão': [3, 'D'], 'Renan Tarcitano': [4, 'A'], 'Lucas Budziak': [3.5, 'M'], 'Gilliard': [3, 'Q'],
+      'Moisés': [3, 'D'], 'Bruninho': [2.5, 'A'], 'Lulu': [3.5, 'M'], 'Biel': [3, 'Q'], 'Peterson': [3, 'D'] };
+  }
+  draw() {
+    const P = this.data(); const r = (n) => P[n][0];
+    const fixed = ['Biel', 'Ramir', 'Taffarel'];
+    const apart = ['Thiago Bromana', 'Renan Tarcitano'];
+    const T = [fixed.slice(), [], []];
+    const sum = (t) => t.reduce((a, n) => a + r(n), 0);
+    const defs = (t) => t.filter((n) => P[n][1] === 'D').length;
+    const clash = (t, n) => apart.indexOf(n) >= 0 && t.some((m) => m !== n && apart.indexOf(m) >= 0);
+    const rest = Object.keys(P).filter((n) => fixed.indexOf(n) < 0)
+      .map((n) => ({ n, k: r(n) + Math.random() * 0.8 })).sort((a, b) => b.k - a.k).map((x) => x.n);
+    rest.forEach((n) => {
+      const open = [0, 1, 2].filter((i) => T[i].length < 5 && !clash(T[i], n));
+      open.sort((a, b) => sum(T[a]) - sum(T[b]) || defs(T[a]) - defs(T[b]));
+      T[open[0]].push(n);
+    });
+    const cost = () => {
+      const s = T.map(sum), d = T.map(defs);
+      return (Math.max.apply(null, s) - Math.min.apply(null, s)) * 2 + (Math.max.apply(null, d) - Math.min.apply(null, d));
+    };
+    for (let k = 0; k < 500; k++) {
+      const i = Math.floor(Math.random() * 3), j = Math.floor(Math.random() * 3);
+      if (i === j) continue;
+      const a = Math.floor(Math.random() * 5), b = Math.floor(Math.random() * 5);
+      const x = T[i][a], y = T[j][b];
+      if (fixed.indexOf(x) >= 0 || fixed.indexOf(y) >= 0) continue;
+      const before = cost();
+      T[i][a] = y; T[j][b] = x;
+      if (cost() > before || clash(T[i], y) || clash(T[j], x)) { T[i][a] = x; T[j][b] = y; }
+    }
+    return T.map((t) => t.slice().sort(() => Math.random() - 0.5));
+  }
+  tap(ti, pi) {
+    const pk = this.state.picked;
+    if (!pk) { this.setState({ picked: [ti, pi] }); return; }
+    if (pk[0] === ti && pk[1] === pi) { this.setState({ picked: null }); return; }
+    if (pk[0] === ti) { this.setState({ picked: [ti, pi] }); return; }
+    const cur = this.state.cur;
+    const prev = this.state.draws[cur].t.map((t) => t.slice());
+    const draws = this.state.draws.map((d, i) => (i === cur ? { id: d.id, t: d.t.map((t) => t.slice()) } : d));
+    const D = draws[cur].t;
+    const tmp = D[pk[0]][pk[1]]; D[pk[0]][pk[1]] = D[ti][pi]; D[ti][pi] = tmp;
+    this.setState({ draws, picked: null, history: this.state.history.concat([{ cur, t: prev }]) });
+  }
+  renderVals() {
+    const P = this.data();
+    const { draws, cur, notes, picked, history, official, fmt, dark } = this.state;
+    const f = (x, d) => x.toFixed(d).replace('.', ',');
+    const draw = draws[cur];
+    const sums = draw.t.map((t) => t.reduce((a, n) => a + P[n][0], 0));
+    const posTxt = (t) => { const c = { D: 0, M: 0, A: 0, Q: 0 }; t.forEach((n) => c[P[n][1]]++); return 'D' + c.D + ' M' + c.M + ' A' + c.A + ' Q' + c.Q; };
+    const teams = draw.t.map((t, ti) => ({
+      name: 'Time ' + (ti + 1), sum: f(sums[ti], 1), avg: f(sums[ti] / t.length, 2), pos: posTxt(t),
+      players: t.map((n, pi) => ({ n, short: n.split(' ')[0], s: f(P[n][0], 1) + '★',
+        pos: { D: 'Defesa', M: 'Meio', A: 'Ataque', Q: 'Qualquer' }[P[n][1]],
+        bg: picked && picked[0] === ti && picked[1] === pi ? (dark ? '#4A3A73' : '#F1E8FF') : 'transparent',
+        tap: () => this.tap(ti, pi) }))
+    }));
+    const spread = Math.max.apply(null, sums) - Math.min.apply(null, sums);
+    const strong = sums.indexOf(Math.max.apply(null, sums)) + 1;
+    const tabs = draws.map((d, i) => ({
+      label: (official === d.id ? '★ ' : '') + 'Sorteio ' + (i + 1), sel: i === cur ? 'true' : 'false',
+      bg: i === cur ? '#1B1430' : '#fff', fg: i === cur ? '#fff' : '#121412', border: i === cur ? '#1B1430' : '#D8D0E6',
+      closeLabel: 'Fechar sorteio ' + (i + 1),
+      go: () => this.setState({ cur: i, picked: null }),
+      close: () => {
+        if (draws.length === 1) return;
+        const nd = draws.filter((_, k) => k !== i);
+        this.setState({ draws: nd, cur: Math.min(cur > i ? cur - 1 : cur, nd.length - 1), picked: null, history: [],
+          official: official === d.id ? null : official });
+      }
+    }));
+    const isOff = official === draw.id;
+    return {
+      teams, tabs, band: this.props.band ?? '#7444D6', showNotes: notes,
+      hint: picked ? 'Agora toca no jogador do outro time pra trocar.' : 'Médias só aparecem pra admin, nunca na imagem. Toca em dois nomes pra trocar.',
+      cardLabel: 'Sorteio ' + (cur + 1) + ' · 23/11',
+      hasAlert: notes && spread >= 1, alert: 'Só admins veem: o Time ' + strong + ' ficou ' + f(spread, 1) + '★ mais forte que o mais fraco.',
+      notesBg: notes ? '#7444D6' : 'transparent', notesAria: notes ? 'true' : 'false',
+      toggleNotes: () => this.setState({ notes: !notes }),
+      addDraw: () => { if (draws.length < 4) this.setState({ draws: draws.concat([{ id: this.state.next, t: this.draw() }]), next: this.state.next + 1, cur: draws.length, picked: null }); },
+      isVert: fmt === 'vert', isSquare: fmt === 'square',
+      vertBg: fmt === 'vert' ? '#fff' : 'transparent', squareBg: fmt === 'square' ? '#fff' : 'transparent',
+      setVert: () => this.setState({ fmt: 'vert' }), setSquare: () => this.setState({ fmt: 'square' }),
+      lightBg: dark ? 'transparent' : '#fff', darkBg: dark ? '#fff' : 'transparent',
+      setLight: () => this.setState({ dark: false }), setDark: () => this.setState({ dark: true }),
+      cardBg: dark ? '#17121F' : '#fff', titleFg: dark ? '#fff' : '#121412', nameFg: dark ? '#EDE9F5' : '#3A3450',
+      subFg: dark ? '#B9AFCB' : '#5B5570', footFg: dark ? '#C9B2FF' : '#7444D6',
+      downloadLabel: draws.length > 1 ? 'Baixar as ' + draws.length : 'Baixar imagem',
+      offLabel: isOff ? '★ Sorteio oficial do dia' : 'Marcar como oficial',
+      offBg: isOff ? '#4F2A9E' : '#7444D6',
+      markOfficial: () => this.setState({ official: isOff ? null : draw.id }),
+      undoFg: history.length ? '#121412' : '#B9AFCB',
+      undo: () => {
+        if (!history.length) return;
+        const last = history[history.length - 1];
+        const nd = draws.map((d, i) => (i === last.cur ? { id: d.id, t: last.t } : d));
+        this.setState({ draws: nd, cur: last.cur, history: history.slice(0, -1), picked: null });
+      }
+    };
+  }
+}
+</script>
+</body>
+</html>

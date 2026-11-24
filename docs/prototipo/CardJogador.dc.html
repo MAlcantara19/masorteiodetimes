@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Meu card</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7444D6}a:hover{color:#4F2A9E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F6F4FA; font-family: Inter, system-ui, sans-serif; color: #121412">
+  <div style="height: 844px; overflow-y: auto; box-sizing: border-box; padding: 52px 16px 110px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 13px; color: #5B5570">Matheus Alcântara · Bola Fora</span>
+        <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700">Meu card</h1>
+      </div>
+      <a href="Album.dc.html" style="font-size: 13px; font-weight: 600">Ver álbum →</a>
+    </div>
+
+    <div style="display: flex; justify-content: center; padding: 6px 0 4px">
+      <div style="width: 250px; height: 362px">
+        <div style="width: 200px; height: 290px; transform: scale(1.25); transform-origin: 0 0">
+          <dc-import name="Carta" apelido="Alcântara" pos="GOL" tier="{{ tier }}" cor="{{ cor }}" hint-size="200px,290px"></dc-import>
+        </div>
+      </div>
+    </div>
+
+    <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 10px">
+      <span style="font-size: 13px; font-weight: 600">Raridade (no app ela muda sozinha)</span>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px">
+        <sc-for list="{{ tiers }}" as="t" hint-placeholder-count="5">
+          <button onClick="{{ t.pick }}" aria-pressed="{{ t.on }}" style="height: 36px; padding: 0 12px; border-radius: 99px; border: 1.5px solid {{ t.border }}; background: {{ t.bg }}; color: {{ t.fg }}; font: inherit; font-size: 13px; font-weight: 600">{{ t.label }}</button>
+        </sc-for>
+      </div>
+      <span style="font-size: 12px; color: #5B5570; line-height: 1.45">{{ rule }}</span>
+      <sc-if value="{{ isMes }}" hint-placeholder-val="{{ false }}">
+        <div style="display: flex; flex-direction: column; gap: 6px">
+          <span style="font-size: 12px; font-weight: 600">Cor escolhida pelo jogador do mês</span>
+          <div style="display: flex; gap: 8px">
+            <sc-for list="{{ colors }}" as="c" hint-placeholder-count="6">
+              <button onClick="{{ c.pick }}" aria-label="{{ c.label }}" aria-pressed="{{ c.on }}" style="width: 40px; height: 40px; border-radius: 20px; background: {{ c.hex }}; border: 3px solid {{ c.ring }}; padding: 0"></button>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+      <button style="height: 44px; border-radius: 12px; border: 1px solid #D8D0E6; background: #fff; font: inherit; font-size: 14px; font-weight: 600; color: #121412">Trocar foto</button>
+      <button style="height: 44px; border-radius: 12px; border: 1px solid #D8D0E6; background: #fff; font: inherit; font-size: 14px; font-weight: 600; color: #121412">Editar apelido</button>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 24px; background: #F6F4FA; border-top: 1px solid #E6E1EF; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+    <button style="height: 50px; border-radius: 14px; border: 1.5px solid #1B1430; background: #fff; font: inherit; font-size: 15px; font-weight: 600; color: #121412">Baixar card</button>
+    <button style="height: 50px; border-radius: 14px; border: none; background: #7444D6; color: #fff; font: inherit; font-size: 15px; font-weight: 600">Compartilhar</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { tier: 'destaque', cor: '#C8102E' }; }
+  renderVals() {
+    const R = {
+      bronze: ['Bronze', 'Bronze: todo mundo começa aqui.'],
+      prata: ['Prata', 'Prata: a partir de 10 peladas na temporada.'],
+      ouro: ['Ouro', 'Ouro: 25 peladas, ou uma medalha no mês (artilheiro, garçom, muralha, craque).'],
+      destaque: ['Destaque da semana', 'Carta preta especial: quem entrou na seleção da semana. Fica valendo por 7 dias.'],
+      mes: ['Jogador do mês', 'Carta especial do craque do mês. Ele escolhe a cor do fundo.']
+    };
+    const tiers = Object.keys(R).map((k) => {
+      const on = k === this.state.tier;
+      return { label: R[k][0], on: on ? 'true' : 'false', bg: on ? '#1B1430' : '#fff', fg: on ? '#fff' : '#121412', border: on ? '#1B1430' : '#E6E1EF',
+        pick: () => this.setState({ tier: k }) };
+    });
+    const colors = [['Vermelho', '#C8102E'], ['Laranja', '#E8661C'], ['Azul', '#2B59C3'], ['Roxo', '#7444D6'], ['Verde', '#12805C'], ['Rosa', '#D23A84']].map(([label, hex]) => {
+      const on = hex === this.state.cor;
+      return { label, hex, on: on ? 'true' : 'false', ring: on ? '#1B1430' : '#fff', pick: () => this.setState({ cor: hex }) };
+    });
+    return { tier: this.state.tier, cor: this.state.cor, tiers, rule: R[this.state.tier][1], isMes: this.state.tier === 'mes', colors };
+  }
+}
+</script>
+</body>
+</html>

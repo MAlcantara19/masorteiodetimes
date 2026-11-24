@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Avaliar a pelada</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7444D6}a:hover{color:#4F2A9E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F6F4FA; font-family: Inter, system-ui, sans-serif; color: #121412">
+  <div style="height: 844px; overflow-y: auto; box-sizing: border-box; padding: 52px 18px 110px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; flex-direction: column; gap: 4px">
+      <span style="font-size: 13px; color: #5B5570">Bola Fora · segunda 23/11 · leva 20 segundos</span>
+      <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700">Como foi a pelada?</h1>
+    </div>
+
+    <sc-for list="{{ qs }}" as="q" hint-placeholder-count="3">
+      <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+        <span style="font-size: 15px; font-weight: 600">{{ q.title }}</span>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px">
+          <sc-for list="{{ q.opts }}" as="o" hint-placeholder-count="4">
+            <button onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="min-height: 40px; padding: 0 12px; border-radius: 99px; border: 1.5px solid {{ o.border }}; background: {{ o.bg }}; color: {{ o.fg }}; font: inherit; font-size: 14px; font-weight: 500">{{ o.label }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-for>
+
+    <sc-if value="{{ askPlayer }}" hint-placeholder-val="{{ true }}">
+      <div style="background: #fff; border: 1.5px solid #7444D6; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+        <span style="font-size: 15px; font-weight: 600">Quem tá com a nota fora do lugar?</span>
+        <sc-for list="{{ suggest }}" as="s" hint-placeholder-count="3">
+          <div style="display: flex; align-items: center; gap: 8px">
+            <span style="flex: 1; font-size: 15px">{{ s.n }}</span>
+            <button onClick="{{ s.down }}" aria-label="{{ s.downLabel }}" style="height: 38px; padding: 0 12px; border-radius: 10px; border: 1.5px solid {{ s.downBorder }}; background: {{ s.downBg }}; color: {{ s.downFg }}; font: inherit; font-size: 13px; font-weight: 600">Tá alta</button>
+            <button onClick="{{ s.up }}" aria-label="{{ s.upLabel }}" style="height: 38px; padding: 0 12px; border-radius: 10px; border: 1.5px solid {{ s.upBorder }}; background: {{ s.upBg }}; color: {{ s.upFg }}; font: inherit; font-size: 13px; font-weight: 600">Tá baixa</button>
+          </div>
+        </sc-for>
+        <span style="font-size: 11px; color: #5B5570">Ninguém vê as notas. Só os admins recebem a sugestão.</span>
+      </div>
+    </sc-if>
+
+    <label style="display: flex; flex-direction: column; gap: 6px; background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; padding: 14px">
+      <span style="font-size: 15px; font-weight: 600">Algo mais? <span style="font-weight: 400; color: #5B5570">(opcional)</span></span>
+      <textarea rows="2" placeholder="Ex.: dava pra separar o Thiago e o Renan" style="border: 1px solid #E6E1EF; border-radius: 10px; padding: 10px; font: inherit; font-size: 14px; resize: none; background: #F6F4FA"></textarea>
+    </label>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 18px 24px; background: #F6F4FA; border-top: 1px solid #E6E1EF">
+    <button onClick="{{ send }}" style="width: 100%; height: 54px; border-radius: 16px; border: none; background: {{ sendBg }}; color: #fff; font: inherit; font-size: 16px; font-weight: 700">{{ sendLabel }}</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { a: {}, adj: { 'Lulu': 'up' }, sent: false }; }
+  renderVals() {
+    const A = this.state.a;
+    const Q = [
+      { id: 'bal', title: 'Os times ficaram equilibrados?', opts: ['Muito', 'Mais ou menos', 'Não'] },
+      { id: 'strong', title: 'Qual time ficou mais forte?', opts: ['Time 1', 'Time 2', 'Time 3', 'Ficou igual'] },
+      { id: 'why', title: 'Por quê?', opts: ['Nota de alguém fora do lugar', 'Um time sem defesa', 'Muito craque junto', 'Foi sorte mesmo'] }
+    ];
+    const qs = Q.map((q) => ({ title: q.title, opts: q.opts.map((label) => {
+      const on = A[q.id] === label;
+      return { label, on: on ? 'true' : 'false', bg: on ? '#7444D6' : '#fff', fg: on ? '#fff' : '#121412', border: on ? '#7444D6' : '#E6E1EF',
+        pick: () => this.setState({ a: { ...A, [q.id]: label } }) };
+    }) }));
+    const adj = this.state.adj;
+    const mk = (n, dir) => { const on = adj[n] === dir; return { bg: on ? '#7444D6' : '#fff', fg: on ? '#fff' : '#121412', border: on ? '#7444D6' : '#E6E1EF' }; };
+    const suggest = ['Lulu', 'Thiago Bromana', 'Fubuia'].map((n) => {
+      const d = mk(n, 'down'), u = mk(n, 'up');
+      return { n, downBg: d.bg, downFg: d.fg, downBorder: d.border, upBg: u.bg, upFg: u.fg, upBorder: u.border,
+        downLabel: 'Nota de ' + n + ' tá alta', upLabel: 'Nota de ' + n + ' tá baixa',
+        down: () => this.setState({ adj: { ...adj, [n]: adj[n] === 'down' ? null : 'down' } }),
+        up: () => this.setState({ adj: { ...adj, [n]: adj[n] === 'up' ? null : 'up' } }) };
+    });
+    const sent = this.state.sent;
+    return { qs, suggest, askPlayer: A.why === 'Nota de alguém fora do lugar' || !A.why,
+      sendLabel: sent ? 'Valeu! Resposta enviada' : 'Enviar', sendBg: sent ? '#4F2A9E' : '#7444D6',
+      send: () => this.setState({ sent: true }) };
+  }
+}
+</script>
+</body>
+</html>

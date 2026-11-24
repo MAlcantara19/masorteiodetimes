@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Resultados do dia</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7444D6}a:hover{color:#4F2A9E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F6F4FA; font-family: Inter, system-ui, sans-serif; color: #121412">
+  <div style="height: 844px; overflow-y: auto; box-sizing: border-box; padding: 52px 20px 100px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; justify-content: space-between; align-items: flex-end">
+      <div style="display: flex; flex-direction: column; gap: 2px">
+        <span style="font-size: 13px; color: #5B6159">Segunda · 23/11</span>
+        <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700">Resultados</h1>
+      </div>
+      <a href="Feedback.dc.html" style="display: flex; align-items: center; height: 40px; padding: 0 12px; border-radius: 12px; background: #7444D6; color: #fff; font-size: 13px; font-weight: 600; text-decoration: none">Pedir avaliação</a>
+    </div>
+
+    <div style="background: #121412; color: #fff; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+      <span style="font-size: 12px; font-weight: 600; color: #C9B2FF; letter-spacing: 0.6px">FILA AGORA</span>
+      <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap">
+        <span style="font-size: 13px; background: #7444D6; padding: 6px 10px; border-radius: 99px; font-weight: 600">Em campo: Time 1 × Time 2 · 1 a 0</span>
+        <span style="font-size: 13px; background: #B4460B; padding: 6px 10px; border-radius: 99px; font-weight: 600">Próximo: Time 3</span>
+      </div>
+      <span style="font-size: 12px; color: #C9CDC6">Regra: quem ganha fica · empate sai quem está há mais tempo</span>
+    </div>
+
+    <a href="FimPelada.dc.html" style="display: flex; align-items: center; justify-content: center; height: 48px; border-radius: 14px; background: #7444D6; color: #fff; text-decoration: none; font-size: 15px; font-weight: 600">Encerrar pelada e gerar resumo</a>
+
+    <sc-for list="{{ games }}" as="g" hint-placeholder-count="3">
+      <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <span style="font-size: 12px; font-weight: 600; color: #5B6159; flex: 1">{{ g.label }}</span>
+          <button style="height: 30px; padding: 0 10px; margin-right: 6px; border-radius: 99px; border: 1px solid #D8D0E6; background: #fff; font: inherit; font-size: 12px; font-weight: 600; color: #4F2A9E">Corrigir</button>
+          <span style="font-size: 12px; font-weight: 600; color: {{ g.resColor }}; background: {{ g.resBg }}; padding: 4px 8px; border-radius: 99px">{{ g.result }}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 8px">
+          <span style="font-size: 16px; font-weight: 600; color: {{ g.aColor }}">{{ g.a }}</span>
+          <span style="font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums">{{ g.score }}</span>
+          <span style="font-size: 16px; font-weight: 600; text-align: right; color: {{ g.bColor }}">{{ g.b }}</span>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; font-size: 13px; color: #3A3F39">
+          <span style="white-space: pre-line">{{ g.goalsA }}</span>
+          <span style="white-space: pre-line; text-align: right">{{ g.goalsB }}</span>
+        </div>
+        <sc-if value="{{ g.hasNote }}" hint-placeholder-val="{{ false }}">
+          <span style="font-size: 12px; color: #8A3508; background: #FCEBDD; border-radius: 10px; padding: 8px 10px">{{ g.note }}</span>
+        </sc-if>
+      </div>
+    </sc-for>
+
+    <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px">
+      <span style="font-size: 12px; font-weight: 600; color: #5B6159">ARTILHARIA DO DIA</span>
+      <sc-for list="{{ scorers }}" as="s" hint-placeholder-count="4">
+        <div style="display: flex; justify-content: space-between; font-size: 14px">
+          <span>{{ s.n }}</span><span style="font-weight: 600">{{ s.g }}</span>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <nav aria-label="Navegação principal" style="position: absolute; left: 0; right: 0; bottom: 0; height: 78px; background: #fff; border-top: 1px solid #E6E1EF; display: flex; justify-content: space-around; align-items: flex-start; padding-top: 10px">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: #5B6159; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21H3z"/></svg>Início</a>
+    <a href="Jogadores.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: #5B6159; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2.2.6 3.5 2.6 3.5 6"/></svg>Jogadores</a>
+    <a href="Sorteio.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: #5B6159; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h4l10 12h4M3 18h4l3-3.6M14 9.6 17 6h4M18 3l3 3-3 3M18 15l3 3-3 3"/></svg>Sorteio</a>
+    <a href="Partida.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #7444D6; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>Partida</a>
+    <a href="Mais.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: #5B6159; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Mais</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const C = { 'Time 1': '#7444D6', 'Time 2': '#1D4ED8', 'Time 3': '#B4460B' };
+    const raw = [
+      { label: 'JOGO 2 · 18:39', a: 'Time 3', b: 'Time 1', score: '1 × 2', result: 'Time 1 venceu por 1',
+        goalsA: 'Gilliard 5\'', goalsB: 'Biel 2\'\nSem autor 6\'', note: '1 gol sem autor: toca em Corrigir pra marcar quem fez. Ycaro completou o Time 3 (Budziak saiu no 3\')', win: 'Time 1' },
+      { label: 'JOGO 1 · 18:31', a: 'Time 2', b: 'Time 3', score: '0 × 1', result: 'Time 3 venceu por 1',
+        goalsA: '—', goalsB: 'Renan 4\'', note: '', win: 'Time 3' }
+    ];
+    const games = raw.map((g) => ({ ...g, aColor: C[g.a], bColor: C[g.b], hasNote: !!g.note,
+      resColor: '#fff', resBg: C[g.win] }));
+    const scorers = [['Renan', 1], ['Biel', 1], ['Taffarel', 1], ['Gilliard', 1], ['Ramir', 1]].map(([n, g]) => ({ n, g: g + ' gol' }));
+    return { games, scorers };
+  }
+}
+</script>
+</body>
+</html>

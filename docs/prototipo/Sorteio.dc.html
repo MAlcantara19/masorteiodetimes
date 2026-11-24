@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Montar sorteio</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7444D6}a:hover{color:#4F2A9E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F6F4FA; font-family: Inter, system-ui, sans-serif; color: #121412">
+  <div style="height: 844px; overflow-y: auto; box-sizing: border-box; padding: 52px 20px 120px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 13px; color: #5B6159">Bola Fora · segunda 23/11 · 18:30</span>
+      <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700">Montar sorteio</h1>
+    </div>
+
+    <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <span style="font-size: 14px; font-weight: 600">Quem joga hoje · {{ count }}</span>
+        <a href="ColarLista.dc.html" style="font-size: 12px; font-weight: 600">Colar lista de novo</a>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 6px">
+        <sc-for list="{{ people }}" as="p" hint-placeholder-count="16">
+          <button onClick="{{ p.toggle }}" aria-pressed="{{ p.on }}" style="height: 34px; padding: 0 11px; border-radius: 99px; border: 1.5px solid {{ p.border }}; background: {{ p.bg }}; color: {{ p.fg }}; font: inherit; font-size: 13px; font-weight: 500; text-decoration: {{ p.deco }}">{{ p.n }}</button>
+        </sc-for>
+      </div>
+      <span style="font-size: 11px; color: #5B6159">Toca no nome pra tirar ou colocar. Laranja = fica na espera.</span>
+    </div>
+
+    <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+      <span style="font-size: 14px; font-weight: 600">Quantos times?</span>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px">
+        <sc-for list="{{ teamOpts }}" as="o" hint-placeholder-count="4">
+          <button onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="height: 50px; border-radius: 12px; border: 2px solid {{ o.border }}; background: {{ o.bg }}; color: {{ o.fg }}; font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700">{{ o.n }}</button>
+        </sc-for>
+      </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 4px">
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 14px; font-weight: 600">Jogadores por time</span>
+          <span style="font-size: 12px; color: #5B6159">sem contar o goleiro</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 4px">
+          <button onClick="{{ minus }}" aria-label="Menos um" style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid #E6E1EF; background: #F6F4FA; font: inherit; font-size: 20px; color: #121412">−</button>
+          <span style="width: 40px; text-align: center; font-family: 'Space Grotesk', sans-serif; font-size: 26px; font-weight: 700">{{ per }}</span>
+          <button onClick="{{ plus }}" aria-label="Mais um" style="width: 44px; height: 44px; border-radius: 12px; border: 1px solid #E6E1EF; background: #F6F4FA; font: inherit; font-size: 20px; color: #121412">+</button>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: {{ sumColor }}; background: {{ sumBg }}; border-radius: 12px; padding: 10px 12px">
+      <span style="font-weight: 600">{{ summary }}</span>
+      <sc-if value="{{ hasExtra }}" hint-placeholder-val="{{ true }}">
+        <span>Na espera: {{ extraNames }}. Toca em outro nome se preferir que outra pessoa fique de fora.</span>
+      </sc-if>
+    </div>
+
+    <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px">
+      <span style="font-size: 14px; font-weight: 600">Equilibrar pela avaliação</span>
+      <div role="group" aria-label="Tipo de avaliação" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: #ECE7F4; border-radius: 12px; padding: 4px; gap: 4px">
+        <button onClick="{{ setSimple }}" style="height: 40px; border: none; border-radius: 9px; font: inherit; font-size: 14px; font-weight: 600; background: {{ simpleBg }}; color: #121412">Simples · estrelas</button>
+        <button onClick="{{ setFull }}" style="height: 40px; border: none; border-radius: 9px; font: inherit; font-size: 14px; font-weight: 600; background: {{ fullBg }}; color: #121412">Completa</button>
+      </div>
+    </div>
+
+    <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 12px">
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <span style="font-size: 12px; font-weight: 600; color: #5B6159">REGRAS · PADRÃO DA BOLA FORA</span>
+        <span style="font-size: 11px; color: #4F2A9E; font-weight: 600">salvas</span>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <span style="font-size: 14px; font-weight: 600">Jogar junto</span>
+          <button style="height: 32px; padding: 0 10px; border-radius: 99px; border: 1px solid #7444D6; background: #fff; color: #4F2A9E; font: inherit; font-size: 12px; font-weight: 600">+ Adicionar</button>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px">
+          <span style="font-size: 13px; background: #EFE8FC; color: #4F2A9E; border-radius: 99px; padding: 7px 12px; font-weight: 600">Biel · Ramir · Taffarel</span>
+        </div>
+      </div>
+      <div style="height: 1px; background: #F0ECF6"></div>
+      <div style="display: flex; flex-direction: column; gap: 8px">
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <span style="font-size: 14px; font-weight: 600">Separar</span>
+          <button style="height: 32px; padding: 0 10px; border-radius: 99px; border: 1px solid #B4460B; background: #fff; color: #8A3508; font: inherit; font-size: 12px; font-weight: 600">+ Adicionar</button>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: 6px">
+          <span style="font-size: 13px; background: #FCEBDD; color: #8A3508; border-radius: 99px; padding: 7px 12px; font-weight: 600">Thiago Bromana × Renan</span>
+        </div>
+      </div>
+      <div style="height: 1px; background: #F0ECF6"></div>
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <div style="display: flex; flex-direction: column; gap: 2px">
+          <span style="font-size: 14px; font-weight: 600">Equilibrar posições</span>
+          <span style="font-size: 12px; color: #5B6159">não deixar um time só de quem marca</span>
+        </div>
+        <button onClick="{{ togglePos }}" role="switch" aria-checked="{{ posAria }}" aria-label="Equilibrar posições" style="width: 52px; height: 32px; border-radius: 99px; border: none; background: {{ posBg }}; position: relative; padding: 0">
+          <span style="position: absolute; top: 3px; left: {{ posLeft }}; width: 26px; height: 26px; border-radius: 13px; background: #fff"></span>
+        </button>
+      </div>
+      <div style="height: 1px; background: #F0ECF6"></div>
+      <div style="display: flex; justify-content: space-between; align-items: center">
+        <span style="font-size: 14px; font-weight: 600">Goleiro fixo em cada time</span>
+        <button onClick="{{ toggleGk }}" role="switch" aria-checked="{{ gkAria }}" aria-label="Goleiro fixo em cada time" style="width: 52px; height: 32px; border-radius: 99px; border: none; background: {{ gkBg }}; position: relative; padding: 0">
+          <span style="position: absolute; top: 3px; left: {{ gkLeft }}; width: 26px; height: 26px; border-radius: 13px; background: #fff"></span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 14px 20px 26px; background: #F6F4FA; border-top: 1px solid #E6E1EF">
+    <a href="Times.dc.html" style="display: flex; align-items: center; justify-content: center; gap: 8px; height: 56px; border-radius: 16px; background: #7444D6; color: #fff; text-decoration: none; font-size: 17px; font-weight: 700">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h4l10 12h4M3 18h4l3-3.6M14 9.6 17 6h4M18 3l3 3-3 3M18 15l3 3-3 3"/></svg>
+      Sortear
+    </a>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.order = ['Thiago Bromana', 'João Guilherme', 'Fubuia', 'Ramir', 'Felipe', 'Taffarel', 'Marcelão', 'Renan', 'Budziak', 'Gilliard', 'Moisés', 'Bruninho', 'Lulu', 'Biel', 'Peterson', 'Ycaro'];
+    this.state = { teams: 3, per: 5, mode: 'simple', gk: true, pos: true, off: {}, bench: null };
+  }
+  renderVals() {
+    const { teams, per, mode, gk, off } = this.state;
+    const need = teams * per;
+    const inList = this.order.filter((n) => !off[n]);
+    const count = inList.length;
+    let extras = [];
+    if (count > need) {
+      const excess = count - need;
+      const b = this.state.bench;
+      if (b && inList.indexOf(b) >= 0) {
+        const others = inList.filter((n) => n !== b);
+        extras = [b].concat(excess > 1 ? others.slice(-(excess - 1)) : []);
+      } else extras = inList.slice(-excess);
+    }
+    const people = this.order.map((n) => {
+      const isOff = !!off[n], isExtra = extras.indexOf(n) >= 0;
+      return { n, on: isOff ? 'false' : 'true',
+        bg: isOff ? '#fff' : isExtra ? '#FCEBDD' : '#EFE8FC',
+        fg: isOff ? '#5B6159' : isExtra ? '#8A3508' : '#4F2A9E',
+        border: isOff ? '#D9DCD6' : isExtra ? '#B4460B' : '#EFE8FC',
+        deco: isOff ? 'line-through' : 'none',
+        toggle: () => {
+          if (count > need && !isOff && !isExtra) { this.setState({ bench: n }); return; }
+          this.setState({ off: { ...off, [n]: !isOff }, bench: null });
+        } };
+    });
+    const teamOpts = [2, 3, 4, 5].map((k) => {
+      const on = k === teams;
+      return { n: k, on: on ? 'true' : 'false', bg: on ? '#7444D6' : '#fff', fg: on ? '#fff' : '#121412', border: on ? '#7444D6' : '#E6E1EF',
+        pick: () => this.setState({ teams: k }) };
+    });
+    let summary, ok = true;
+    if (count === need) summary = count + ' jogadores → ' + teams + ' times de ' + per + '. Fecha certinho.';
+    else if (count > need) { ok = false; summary = count + ' marcados pra ' + teams + ' times de ' + per + ': ' + (count - need) + (count - need === 1 ? ' a mais.' : ' a mais.'); }
+    else { ok = false; summary = 'Faltam ' + (need - count) + ' jogadores pra ' + teams + ' times de ' + per + '.'; }
+    return {
+      people, count, teamOpts, per, summary, hasExtra: extras.length > 0, extraNames: extras.join(', '),
+      minus: () => this.setState({ per: Math.max(2, per - 1) }),
+      plus: () => this.setState({ per: Math.min(11, per + 1) }),
+      simpleBg: mode === 'simple' ? '#fff' : 'transparent', fullBg: mode === 'full' ? '#fff' : 'transparent',
+      setSimple: () => this.setState({ mode: 'simple' }), setFull: () => this.setState({ mode: 'full' }),
+      gkBg: gk ? '#7444D6' : '#B9BDB6', gkLeft: gk ? '23px' : '3px', gkAria: gk ? 'true' : 'false',
+      toggleGk: () => this.setState({ gk: !gk }),
+      posBg: this.state.pos ? '#7444D6' : '#B9BDB6', posLeft: this.state.pos ? '23px' : '3px', posAria: this.state.pos ? 'true' : 'false',
+      togglePos: () => this.setState({ pos: !this.state.pos }),
+      sumColor: ok ? '#4F2A9E' : '#8A3508', sumBg: ok ? '#EFE8FC' : '#FCEBDD'
+    };
+  }
+}
+</script>
+</body>
+</html>

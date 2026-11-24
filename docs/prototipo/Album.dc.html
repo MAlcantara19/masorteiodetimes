@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Álbum e seleção do mês</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7444D6}a:hover{color:#4F2A9E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F6F4FA; font-family: Inter, system-ui, sans-serif; color: #121412">
+  <div style="height: 844px; overflow-y: auto; box-sizing: border-box; padding: 52px 16px 110px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 13px; color: #5B5570">Bola Fora · novembro</span>
+      <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700">Álbum da pelada</h1>
+    </div>
+
+    <div role="tablist" aria-label="Seções" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: #ECE7F4; border-radius: 12px; padding: 4px; gap: 4px">
+      <button role="tab" aria-selected="{{ albumSel }}" onClick="{{ showAlbum }}" style="height: 38px; border: none; border-radius: 9px; font: inherit; font-size: 14px; font-weight: 600; background: {{ albumBg }}; color: #121412">Álbum · 22</button>
+      <button role="tab" aria-selected="{{ teamSel }}" onClick="{{ showTeam }}" style="height: 38px; border: none; border-radius: 9px; font: inherit; font-size: 14px; font-weight: 600; background: {{ teamBg }}; color: #121412">Seleção do mês</button>
+    </div>
+
+    <sc-if value="{{ isAlbum }}" hint-placeholder-val="{{ true }}">
+      <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; justify-items: center">
+        <sc-for list="{{ cards }}" as="c" hint-placeholder-count="8">
+          <div style="width: 160px; height: 232px">
+            <div style="width: 200px; height: 290px; transform: scale(0.8); transform-origin: 0 0">
+              <dc-import name="Carta" apelido="{{ c.n }}" pos="{{ c.pos }}" tier="{{ c.tier }}" cor="{{ c.cor }}" s1="{{ c.j }}" s2="{{ c.v }}" s3="{{ c.g }}" l3="{{ c.l3 }}" s4="{{ c.m }}" hint-size="200px,290px"></dc-import>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isTeam }}" hint-placeholder-val="{{ false }}">
+      <div style="background: #1B1430; border-radius: 18px; padding: 16px 10px 18px; display: flex; flex-direction: column; align-items: center; gap: 12px; position: relative; overflow: hidden">
+        <div aria-hidden="true" style="position: absolute; left: 50%; top: 50%; width: 180px; height: 180px; margin: -90px 0 0 -90px; border-radius: 90px; border: 1.5px solid rgba(201,178,255,0.18)"></div>
+        <div aria-hidden="true" style="position: absolute; left: 0; right: 0; top: 50%; height: 1.5px; background: rgba(201,178,255,0.18)"></div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 2px; position: relative">
+          <span style="font-size: 11px; font-weight: 700; letter-spacing: 1.5px; color: #C9B2FF">SELEÇÃO DO MÊS</span>
+          <span style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: #fff">Bola Fora · Novembro</span>
+        </div>
+        <sc-for list="{{ rows }}" as="r" hint-placeholder-count="3">
+          <div style="display: flex; gap: 14px; justify-content: center; position: relative">
+            <sc-for list="{{ r.cards }}" as="c" hint-placeholder-count="2">
+              <div style="width: 116px; height: 168px">
+                <div style="width: 200px; height: 290px; transform: scale(0.58); transform-origin: 0 0">
+                  <dc-import name="Carta" apelido="{{ c.n }}" pos="{{ c.pos }}" tier="destaque" s1="{{ c.j }}" s2="{{ c.v }}" s3="{{ c.g }}" l3="{{ c.l3 }}" s4="{{ c.m }}" hint-size="200px,290px"></dc-import>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-for>
+        <span style="font-size: 11px; color: #B9AFCB; position: relative">Montada pela votação da galera + estatísticas do mês</span>
+      </div>
+    </sc-if>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 24px; background: #F6F4FA; border-top: 1px solid #E6E1EF; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+    <button style="height: 50px; border-radius: 14px; border: 1.5px solid #1B1430; background: #fff; font: inherit; font-size: 15px; font-weight: 600; color: #121412">Baixar imagem</button>
+    <button style="height: 50px; border-radius: 14px; border: none; background: #1A8F4E; color: #fff; font: inherit; font-size: 15px; font-weight: 600">Mandar no Zap</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { tab: 'team' }; }
+  renderVals() {
+    const P = [
+      ['Lulu', 'MEI', 'mes', '#2B59C3', 28, 14, 11, 4],
+      ['Renan', 'ATA', 'destaque', '', 27, 15, 14, 3],
+      ['Alcântara', 'GOL', 'ouro', '', 30, 13, 9, 3],
+      ['Ramir', 'QQR', 'ouro', '', 30, 14, 8, 2],
+      ['Biel', 'QQR', 'prata', '', 26, 13, 7, 1],
+      ['Tilu', 'GOL', 'ouro', '', 28, 12, 11, 2],
+      ['Fubuia', 'DEF', 'bronze', '', 12, 4, 1, 0],
+      ['Peterson', 'DEF', 'bronze', '', 6, 3, 0, 0]
+    ];
+    const toCard = ([n, pos, tier, cor, j, v, g, m]) => ({ n, pos, tier, cor: cor || '#7444D6', j: String(j), v: String(v), g: String(g), m: String(m), l3: pos === 'GOL' ? 'S/GOL' : 'GOLS' });
+    const cards = P.map(toCard);
+    const by = (n) => toCard(P.find((x) => x[0] === n));
+    const rows = [{ cards: [by('Renan'), by('Lulu')] }, { cards: [by('Ramir'), by('Biel')] }, { cards: [by('Tilu')] }];
+    const t = this.state.tab;
+    return { cards, rows, isAlbum: t === 'album', isTeam: t === 'team',
+      albumSel: t === 'album' ? 'true' : 'false', teamSel: t === 'team' ? 'true' : 'false',
+      albumBg: t === 'album' ? '#fff' : 'transparent', teamBg: t === 'team' ? '#fff' : 'transparent',
+      showAlbum: () => this.setState({ tab: 'album' }), showTeam: () => this.setState({ tab: 'team' }) };
+  }
+}
+</script>
+</body>
+</html>

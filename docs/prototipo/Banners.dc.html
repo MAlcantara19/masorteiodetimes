@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Banners de premiação</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7444D6}a:hover{color:#4F2A9E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F6F4FA; font-family: Inter, system-ui, sans-serif; color: #121412">
+  <div style="height: 844px; overflow-y: auto; box-sizing: border-box; padding: 52px 16px 110px; display: flex; flex-direction: column; gap: 12px">
+    <div style="display: flex; flex-direction: column; gap: 2px">
+      <span style="font-size: 13px; color: #5B5570">Bola Fora · novembro</span>
+      <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700">Banners</h1>
+    </div>
+
+    <div style="display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px">
+      <sc-for list="{{ kinds }}" as="k" hint-placeholder-count="6">
+        <button onClick="{{ k.pick }}" style="flex-shrink: 0; height: 36px; padding: 0 12px; border-radius: 99px; border: 1.5px solid {{ k.border }}; background: {{ k.bg }}; color: {{ k.fg }}; font: inherit; font-size: 13px; font-weight: 600">{{ k.label }}</button>
+      </sc-for>
+    </div>
+
+    <div role="group" aria-label="Formato" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: #ECE7F4; border-radius: 10px; padding: 3px; gap: 3px">
+      <button onClick="{{ setStory }}" style="height: 34px; border: none; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 600; background: {{ storyBg }}; color: #121412">Story</button>
+      <button onClick="{{ setSquare }}" style="height: 34px; border: none; border-radius: 8px; font: inherit; font-size: 13px; font-weight: 600; background: {{ squareBg }}; color: #121412">Quadrado</button>
+    </div>
+
+    <div style="display: flex; justify-content: center">
+      <div style="width: {{ bw }}; height: {{ bh }}; border-radius: 14px; overflow: hidden; background: #1B1430; color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: space-between; padding: 18px 16px; box-sizing: border-box; position: relative">
+        <div style="width: 100%; display: flex; justify-content: space-between; align-items: center">
+          <span style="width: 40px; height: 40px; border-radius: 20px; border: 2px dashed #C9B2FF; display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 700; color: #C9B2FF; text-align: center; line-height: 1.1">LOGO</span>
+          <span style="font-size: 11px; font-weight: 700; letter-spacing: 1px; color: #C9B2FF">{{ period }}</span>
+        </div>
+        <div style="display: flex; flex-direction: column; align-items: center; gap: 8px">
+          <span style="font-size: 12px; font-weight: 700; letter-spacing: 2px; color: #C9B2FF">{{ k.title }}</span>
+          <div style="width: {{ photo }}; height: {{ photo }}; border-radius: 999px; border: 3px solid #C9B2FF; background: #2A2045; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #C9B2FF">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>
+            <span style="font-size: 10px; font-weight: 600">FOTO</span>
+          </div>
+          <span style="font-family: 'Space Grotesk', sans-serif; font-size: 30px; font-weight: 700; letter-spacing: -0.5px; text-align: center">{{ k.who }}</span>
+          <span style="font-size: 14px; color: #E2D8F5; text-align: center">{{ k.stat }}</span>
+        </div>
+        <span style="font-size: 10px; color: #B9AFCB">Bola Fora · MA Sorteio</span>
+      </div>
+    </div>
+    <span style="font-size: 12px; color: #5B5570; text-align: center">A logo e a foto são espaços prontos: é só subir a imagem quando tiver.</span>
+  </div>
+
+  <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 12px 16px 24px; background: #F6F4FA; border-top: 1px solid #E6E1EF; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+    <button style="height: 50px; border-radius: 14px; border: 1.5px solid #1B1430; background: #fff; font: inherit; font-size: 15px; font-weight: 600; color: #121412">Baixar banner</button>
+    <button style="height: 50px; border-radius: 14px; border: none; background: #1A8F4E; color: #fff; font: inherit; font-size: 15px; font-weight: 600">Mandar no Zap</button>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) { super(p); this.state = { kind: 'art', fmt: 'story' }; }
+  renderVals() {
+    const K = [
+      { id: 'art', label: 'Artilheiro', title: 'ARTILHEIRO DO MÊS', who: 'Renan', stat: '14 gols em 10 peladas' },
+      { id: 'gar', label: 'Garçom', title: 'GARÇOM DO MÊS', who: 'Lulu', stat: '9 assistências' },
+      { id: 'mur', label: 'Muralha', title: 'MURALHA DO MÊS', who: 'Tilu', stat: '1,1 gol sofrido por jogo' },
+      { id: 'cra', label: 'Craque', title: 'CRAQUE DO MÊS', who: 'Lulu', stat: '31 votos da galera' },
+      { id: 'cam', label: 'Time campeão', title: 'CAMPEÃO DO DIA', who: 'Time 1', stat: 'Biel, Ramir, Taffarel, Moisés, Felipe' },
+      { id: 'bag', label: 'Bagre', title: 'BAGRE DO MÊS', who: 'Fubuia', stat: 'com todo o carinho' }
+    ];
+    const k = K.find((x) => x.id === this.state.kind);
+    const story = this.state.fmt === 'story';
+    return {
+      k, period: k.id === 'cam' ? '23/11' : 'NOV 2026',
+      kinds: K.map((x) => { const on = x.id === this.state.kind; return { label: x.label, bg: on ? '#7444D6' : '#fff', fg: on ? '#fff' : '#121412', border: on ? '#7444D6' : '#E6E1EF', pick: () => this.setState({ kind: x.id }) }; }),
+      bw: story ? '270px' : '320px', bh: story ? '480px' : '320px', photo: story ? '128px' : '84px',
+      storyBg: story ? '#fff' : 'transparent', squareBg: story ? 'transparent' : '#fff',
+      setStory: () => this.setState({ fmt: 'story' }), setSquare: () => this.setState({ fmt: 'square' })
+    };
+  }
+}
+</script>
+</body>
+</html>

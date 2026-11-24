@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Carta do jogador (componente)</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+</style>
+</helmet>
+<div style="width: 200px; height: 290px; border-radius: 18px; background: {{ bg }}; color: {{ fg }}; font-family: Inter, system-ui, sans-serif; box-sizing: border-box; padding: 6px; box-shadow: 0 6px 18px rgba(0,0,0,0.25)">
+  <div style="width: 100%; height: 100%; box-sizing: border-box; border: 1.5px solid {{ line }}; border-radius: 13px; padding: 10px 12px; display: flex; flex-direction: column; align-items: center; gap: 6px; position: relative">
+    <div style="width: 100%; display: flex; justify-content: space-between; align-items: flex-start">
+      <div style="display: flex; flex-direction: column; align-items: center; line-height: 1">
+        <span style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700">{{ pos }}</span>
+        <span style="font-size: 8px; font-weight: 700; letter-spacing: 0.6px; color: {{ accent }}; margin-top: 3px">{{ pelada }}</span>
+      </div>
+      <span style="font-size: 8px; font-weight: 700; letter-spacing: 0.8px; padding: 3px 6px; border-radius: 99px; border: 1px solid {{ accent }}; color: {{ accent }}; max-width: 96px; text-align: center; line-height: 1.2">{{ label }}</span>
+    </div>
+    <div style="width: 84px; height: 84px; border-radius: 42px; border: 2px solid {{ accent }}; background: {{ photoBg }}; display: flex; align-items: center; justify-content: center; font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700; color: {{ accent }}">{{ ini }}</div>
+    <span style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; letter-spacing: -0.4px; line-height: 1.1; text-align: center">{{ apelido }}</span>
+    <div style="width: 100%; height: 1px; background: {{ line }}"></div>
+    <div style="width: 100%; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 10px; font-size: 12px">
+      <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+        <div style="display: flex; gap: 5px; align-items: baseline"><span style="font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700">{{ s.v }}</span><span style="font-size: 10px; font-weight: 700; color: {{ accent }}">{{ s.l }}</span></div>
+      </sc-for>
+    </div>
+    <span style="position: absolute; bottom: 7px; font-size: 8px; font-weight: 600; letter-spacing: 0.6px; color: {{ accent }}">MA SORTEIO</span>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"apelido":{"editor":"text","default":"Alcântara"},"pos":{"editor":"text","default":"GOL"},"tier":{"editor":"enum","options":["bronze","prata","ouro","destaque","mes"],"default":"ouro"},"cor":{"editor":"color","default":"#C8102E"},"pelada":{"editor":"text","default":"BOLA FORA"},"s1":{"editor":"text","default":"41"},"s2":{"editor":"text","default":"24"},"s3":{"editor":"text","default":"9"},"s4":{"editor":"text","default":"3"},"l1":{"editor":"text","default":"JOG"},"l2":{"editor":"text","default":"VIT"},"l3":{"editor":"text","default":"S/GOL"},"l4":{"editor":"text","default":"MED"},"$preview":{"width":200,"height":290}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const p = this.props;
+    const tier = p.tier ?? 'ouro';
+    const cor = p.cor ?? '#C8102E';
+    const T = {
+      bronze: { bg: 'linear-gradient(160deg, #E9C29C 0%, #A6673A 100%)', fg: '#2A1607', accent: '#5A3214', line: 'rgba(90,50,20,0.35)', photoBg: 'rgba(255,255,255,0.35)', label: 'BRONZE' },
+      prata: { bg: 'linear-gradient(160deg, #F3F5F8 0%, #A4ADB8 100%)', fg: '#1B2127', accent: '#46505B', line: 'rgba(70,80,91,0.35)', photoBg: 'rgba(255,255,255,0.5)', label: 'PRATA' },
+      ouro: { bg: 'linear-gradient(160deg, #FCEBAA 0%, #C6952A 100%)', fg: '#2C2105', accent: '#6B4E0E', line: 'rgba(107,78,14,0.35)', photoBg: 'rgba(255,255,255,0.4)', label: 'OURO' },
+      destaque: { bg: 'linear-gradient(160deg, #2A2A30 0%, #050506 100%)', fg: '#F7EBC4', accent: '#E6C56A', line: 'rgba(230,197,106,0.45)', photoBg: '#1A1A1F', label: 'DESTAQUE DA SEMANA' },
+      mes: { bg: 'linear-gradient(160deg, ' + cor + ' 0%, #0B0710 100%)', fg: '#FFFFFF', accent: '#FFFFFF', line: 'rgba(255,255,255,0.4)', photoBg: 'rgba(0,0,0,0.25)', label: 'JOGADOR DO MÊS' }
+    };
+    const t = T[tier] || T.ouro;
+    const apelido = p.apelido ?? 'Alcântara';
+    return {
+      ...t, apelido, pos: p.pos ?? 'GOL', pelada: p.pelada ?? 'BOLA FORA',
+      ini: apelido.slice(0, 2).toUpperCase(),
+      stats: [[p.s1 ?? '41', p.l1 ?? 'JOG'], [p.s2 ?? '24', p.l2 ?? 'VIT'], [p.s3 ?? '9', p.l3 ?? 'S/GOL'], [p.s4 ?? '3', p.l4 ?? 'MED']].map(([v, l]) => ({ v, l }))
+    };
+  }
+}
+</script>
+</body>
+</html>

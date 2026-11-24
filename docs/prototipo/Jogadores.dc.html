@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Jogadores e notas</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7444D6}a:hover{color:#4F2A9E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F6F4FA; font-family: Inter, system-ui, sans-serif; color: #121412">
+  <svg width="0" height="0" style="position: absolute" aria-hidden="true"><defs><linearGradient id="meiaEstrela"><stop offset="50%" stop-color="#7444D6"></stop><stop offset="50%" stop-color="#D9DCD6"></stop></linearGradient></defs></svg>
+
+  <div style="height: 844px; overflow-y: auto; box-sizing: border-box; padding: 52px 20px 100px; display: flex; flex-direction: column; gap: 14px">
+    <div style="display: flex; justify-content: space-between; align-items: center">
+      <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700">Jogadores</h1>
+      <button aria-label="Adicionar jogador" style="width: 44px; height: 44px; border-radius: 12px; border: none; background: #7444D6; color: #fff; display: flex; align-items: center; justify-content: center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+    </div>
+
+    <label style="display: flex; align-items: center; gap: 8px; background: #fff; border: 1px solid #E6E1EF; border-radius: 12px; padding: 0 12px; height: 44px; color: #5B6159">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <span style="position: absolute; width: 1px; height: 1px; overflow: hidden">Buscar jogador</span>
+      <input placeholder="Buscar jogador" style="border: none; outline: none; font: inherit; font-size: 15px; flex: 1; background: transparent">
+    </label>
+
+    <span style="font-size: 13px; color: #5B6159">Toca no jogador pra avaliar · 22 no elenco</span>
+
+    <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; overflow: hidden">
+      <sc-for list="{{ players }}" as="p" hint-placeholder-count="9">
+        <button onClick="{{ p.open }}" style="width: 100%; min-height: 54px; display: flex; align-items: center; gap: 10px; padding: 0 14px; border: none; border-bottom: 1px solid #F0ECF6; background: transparent; font: inherit; text-align: left; color: #121412">
+          <span style="flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0">
+            <span style="font-size: 16px; font-weight: 500">{{ p.name }}</span>
+            <span style="font-size: 11px; color: #5B6159">{{ p.level }}</span>
+          </span>
+          <span style="display: flex; gap: 1px" aria-label="{{ p.aria }}">
+            <sc-for list="{{ p.stars }}" as="s" hint-placeholder-count="5">
+              <svg width="17" height="17" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z" fill="{{ s }}"/></svg>
+            </sc-for>
+          </span>
+          <span style="font-size: 13px; font-weight: 700; width: 26px; text-align: right">{{ p.score }}</span>
+        </button>
+      </sc-for>
+    </div>
+  </div>
+
+  <nav aria-label="Navegação principal" style="position: absolute; left: 0; right: 0; bottom: 0; height: 78px; background: #fff; border-top: 1px solid #E6E1EF; display: flex; justify-content: space-around; align-items: flex-start; padding-top: 10px">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: #5B6159; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21H3z"/></svg>Início</a>
+    <a href="Jogadores.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #7444D6; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2.2.6 3.5 2.6 3.5 6"/></svg>Jogadores</a>
+    <a href="Sorteio.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: #5B6159; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h4l10 12h4M3 18h4l3-3.6M14 9.6 17 6h4M18 3l3 3-3 3M18 15l3 3-3 3"/></svg>Sorteio</a>
+    <a href="Partida.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: #5B6159; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>Partida</a>
+    <a href="Mais.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: #5B6159; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Mais</a>
+  </nav>
+
+  <sc-if value="{{ editing }}" hint-placeholder-val="{{ true }}">
+    <div style="position: absolute; inset: 0; background: rgba(18,20,18,0.45); display: flex; flex-direction: column; justify-content: flex-end">
+      <div role="dialog" aria-label="Avaliar jogador" style="background: #fff; border-radius: 22px 22px 0 0; padding: 18px 20px 28px; display: flex; flex-direction: column; gap: 14px">
+        <div style="display: flex; justify-content: space-between; align-items: center">
+          <span style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700">{{ edName }}</span>
+          <button onClick="{{ close }}" aria-label="Fechar" style="width: 44px; height: 44px; border: none; background: transparent; color: #121412; display: flex; align-items: center; justify-content: center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg></button>
+        </div>
+
+        <div role="group" aria-label="Tipo de avaliação" style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); background: #ECE7F4; border-radius: 12px; padding: 4px; gap: 4px">
+          <button onClick="{{ setSimple }}" style="height: 38px; border: none; border-radius: 9px; font: inherit; font-size: 14px; font-weight: 600; background: {{ simpleBg }}; color: #121412">Simples</button>
+          <button onClick="{{ setFull }}" style="height: 38px; border: none; border-radius: 9px; font: inherit; font-size: 14px; font-weight: 600; background: {{ fullBg }}; color: #121412">Completa</button>
+        </div>
+
+        <sc-if value="{{ isSimple }}" hint-placeholder-val="{{ true }}">
+          <div style="display: flex; flex-direction: column; align-items: center; gap: 10px">
+            <div style="display: flex; gap: 2px">
+              <sc-for list="{{ bigStars }}" as="s" hint-placeholder-count="5">
+                <span style="position: relative; width: 56px; height: 56px; display: block">
+                  <svg width="56" height="56" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z" fill="{{ s.fill }}"/></svg>
+                  <button onClick="{{ s.half }}" aria-label="{{ s.halfLabel }}" style="position: absolute; left: 0; top: 0; width: 28px; height: 56px; border: none; background: transparent; padding: 0"></button>
+                  <button onClick="{{ s.full }}" aria-label="{{ s.fullLabel }}" style="position: absolute; right: 0; top: 0; width: 28px; height: 56px; border: none; background: transparent; padding: 0"></button>
+                </span>
+              </sc-for>
+            </div>
+            <span style="font-family: 'Space Grotesk', sans-serif; font-size: 28px; font-weight: 700">{{ edScore }}</span>
+            <span style="font-size: 14px; color: #3A3F39; text-align: center; min-height: 40px">{{ edDesc }}</span>
+            <span style="font-size: 11px; color: #5B6159">Toca na metade esquerda da estrela pra dar meia</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isFull }}" hint-placeholder-val="{{ false }}">
+          <div style="display: flex; flex-direction: column; gap: 10px">
+            <sc-for list="{{ attrs }}" as="a" hint-placeholder-count="7">
+              <div style="display: flex; align-items: center; gap: 10px">
+                <span style="font-size: 13px; color: #3A3F39; width: 100px">{{ a.label }}</span>
+                <span style="flex: 1; height: 10px; background: #ECE7F4; border-radius: 99px; overflow: hidden"><span style="display: block; height: 10px; width: {{ a.w }}; background: #7444D6; border-radius: 99px"></span></span>
+                <span style="font-size: 13px; font-weight: 700; width: 20px; text-align: right">{{ a.v }}</span>
+              </div>
+            </sc-for>
+            <span style="font-size: 12px; color: #5B6159">Nota geral 7,0 de 10 · equivale a 3,5 estrelas</span>
+          </div>
+        </sc-if>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; border-top: 1px solid #F0ECF6; padding-top: 12px">
+          <span style="font-size: 13px; font-weight: 600">Onde joga</span>
+          <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px">
+            <sc-for list="{{ posOpts }}" as="o" hint-placeholder-count="4">
+              <button onClick="{{ o.pick }}" aria-pressed="{{ o.on }}" style="height: 40px; border-radius: 10px; border: 1.5px solid {{ o.border }}; background: {{ o.bg }}; color: {{ o.fg }}; font: inherit; font-size: 13px; font-weight: 600">{{ o.label }}</button>
+            </sc-for>
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center">
+            <span style="font-size: 13px; font-weight: 600">Sabe marcar</span>
+            <button onClick="{{ toggleMark }}" role="switch" aria-checked="{{ markAria }}" aria-label="Sabe marcar" style="width: 52px; height: 32px; border-radius: 99px; border: none; background: {{ markBg }}; position: relative; padding: 0">
+              <span style="position: absolute; top: 3px; left: {{ markLeft }}; width: 26px; height: 26px; border-radius: 13px; background: #fff"></span>
+            </button>
+          </div>
+        </div>
+
+        <button onClick="{{ close }}" style="height: 52px; border-radius: 14px; border: none; background: #7444D6; color: #fff; font: inherit; font-size: 16px; font-weight: 600">Salvar</button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { edit: 'Ramir', mode: 'simple',
+      pos: { 'Biel': 'Q', 'Fubuia': 'D', 'Lulu': 'M', 'Ramir': 'Q', 'Renan': 'A', 'Taffarel': 'D', 'Thiago Bromana': 'A', 'Bruninho': 'A', 'Gustavo': 'M' },
+      mark: { 'Biel': true, 'Fubuia': true, 'Lulu': false, 'Ramir': true, 'Renan': false, 'Taffarel': true, 'Thiago Bromana': false, 'Bruninho': false, 'Gustavo': true },
+      r: { 'Biel': 3, 'Fubuia': 2, 'Lulu': 3.5, 'Ramir': 3.5, 'Renan': 4, 'Taffarel': 3.5, 'Thiago Bromana': 4.5, 'Bruninho': 2.5, 'Gustavo': 5 } };
+  }
+  renderVals() {
+    const D = {
+      0.5: 'Começando agora', 1: 'Muito fraco', 1.5: 'Ruim, sabe menos que o básico (não manja de posicionamento)',
+      2: 'Noção básica, quase tudo no básico', 2.5: 'Abaixo da média, mas tem noção (pesado, não corre…)',
+      3: 'Na média', 3.5: 'Um pouco acima da média', 4: 'Bom, tem bastante noção, mas não carrega o time',
+      4.5: 'Muito bom, carrega o time', 5: 'Quase profissional na pelada'
+    };
+    const short = { 0.5: 'Começando', 1: 'Muito fraco', 1.5: 'Ruim', 2: 'Básico', 2.5: 'Abaixo da média', 3: 'Na média', 3.5: 'Acima da média', 4: 'Bom', 4.5: 'Carrega o time', 5: 'Fora da curva' };
+    const PN = { D: 'Defesa', M: 'Meio', A: 'Ataque', Q: 'Qualquer lugar' };
+    const fill = (n, i) => (n >= i ? '#7444D6' : n >= i - 0.5 ? 'url(#meiaEstrela)' : '#D9DCD6');
+    const fmt = (n) => String(n).replace('.', ',');
+    const R = this.state.r;
+    const players = Object.keys(R).map((name) => ({
+      name, level: short[R[name]] + ' · ' + PN[this.state.pos[name]], score: fmt(R[name]), aria: fmt(R[name]) + ' de 5 estrelas',
+      stars: [1, 2, 3, 4, 5].map((i) => fill(R[name], i)),
+      open: () => this.setState({ edit: name })
+    }));
+    const ed = this.state.edit;
+    const cur = ed ? R[ed] : 0;
+    const setR = (v) => this.setState({ r: { ...R, [ed]: v } });
+    const bigStars = [1, 2, 3, 4, 5].map((i) => ({
+      fill: fill(cur, i), half: () => setR(i - 0.5), full: () => setR(i),
+      halfLabel: fmt(i - 0.5) + ' estrelas', fullLabel: i + (i === 1 ? ' estrela' : ' estrelas')
+    }));
+    const attrs = [['Fôlego', 9], ['Habilidade', 6], ['Noção de jogo', 8], ['Joga pro time', 8], ['Físico', 7], ['Defesa', 6], ['Finalização', 5]]
+      .map(([label, v]) => ({ label, v, w: v * 10 + '%' }));
+    const simple = this.state.mode === 'simple';
+    return {
+      posOpts: ['D', 'M', 'A', 'Q'].map((k) => {
+        const on = ed && this.state.pos[ed] === k;
+        return { label: { D: 'Defesa', M: 'Meio', A: 'Ataque', Q: 'Qualquer' }[k], on: on ? 'true' : 'false',
+          bg: on ? '#7444D6' : '#fff', fg: on ? '#fff' : '#121412', border: on ? '#7444D6' : '#E6E1EF',
+          pick: () => this.setState({ pos: { ...this.state.pos, [ed]: k } }) };
+      }),
+      markBg: ed && this.state.mark[ed] ? '#7444D6' : '#B9B3C6', markLeft: ed && this.state.mark[ed] ? '23px' : '3px',
+      markAria: ed && this.state.mark[ed] ? 'true' : 'false',
+      toggleMark: () => this.setState({ mark: { ...this.state.mark, [ed]: !this.state.mark[ed] } }),
+      players, editing: !!ed, edName: ed || '', edScore: fmt(cur), edDesc: D[cur] || '', bigStars, attrs,
+      isSimple: simple, isFull: !simple,
+      simpleBg: simple ? '#fff' : 'transparent', fullBg: simple ? 'transparent' : '#fff',
+      setSimple: () => this.setState({ mode: 'simple' }), setFull: () => this.setState({ mode: 'full' }),
+      close: () => this.setState({ edit: null })
+    };
+  }
+}
+</script>
+</body>
+</html>

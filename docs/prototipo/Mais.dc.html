@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<title>Presença, mensalidade e nota da pelada</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;family=Space+Grotesk:wght@500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#7444D6}a:hover{color:#4F2A9E}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; position: relative; overflow: hidden; background: #F6F4FA; font-family: Inter, system-ui, sans-serif; color: #121412">
+  <div style="height: 844px; overflow-y: auto; box-sizing: border-box; padding: 52px 20px 100px; display: flex; flex-direction: column; gap: 14px">
+    <h1 style="margin: 0; font-family: 'Space Grotesk', sans-serif; font-size: 24px; font-weight: 700">Mais</h1>
+    <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px">
+      <a href="AoVivo.dc.html" style="display: flex; flex-direction: column; gap: 2px; background: #fff; border: 1px solid #E6E1EF; border-radius: 14px; padding: 12px; text-decoration: none; color: #121412"><span style="font-size: 14px; font-weight: 600">Link ao vivo</span><span style="font-size: 11px; color: #5B5570">placar e artilharia pra todos</span></a>
+      <a href="Campeonato.dc.html" style="display: flex; flex-direction: column; gap: 2px; background: #fff; border: 1px solid #E6E1EF; border-radius: 14px; padding: 12px; text-decoration: none; color: #121412"><span style="font-size: 14px; font-weight: 600">Campeonato</span><span style="font-size: 11px; color: #5B5570">melhores da semana e do mês</span></a>
+      <a href="Feedback.dc.html" style="display: flex; flex-direction: column; gap: 2px; background: #fff; border: 1px solid #E6E1EF; border-radius: 14px; padding: 12px; text-decoration: none; color: #121412"><span style="font-size: 14px; font-weight: 600">Avaliar a pelada</span><span style="font-size: 11px; color: #5B5570">link pós-jogo pra galera</span></a>
+      <a href="Master.dc.html" style="display: flex; flex-direction: column; gap: 2px; background: #fff; border: 1px solid #E6E1EF; border-radius: 14px; padding: 12px; text-decoration: none; color: #121412"><span style="font-size: 14px; font-weight: 600">Painel master</span><span style="font-size: 11px; color: #5B5570">admins e acessos</span></a>
+      <a href="CardJogador.dc.html" style="display: flex; flex-direction: column; gap: 2px; background: #fff; border: 1px solid #E6E1EF; border-radius: 14px; padding: 12px; text-decoration: none; color: #121412"><span style="font-size: 14px; font-weight: 600">Meu card</span><span style="font-size: 11px; color: #5B5570">figurinha com 5 estilos</span></a>
+      <a href="Banners.dc.html" style="display: flex; flex-direction: column; gap: 2px; background: #fff; border: 1px solid #E6E1EF; border-radius: 14px; padding: 12px; text-decoration: none; color: #121412"><span style="font-size: 14px; font-weight: 600">Banners</span><span style="font-size: 11px; color: #5B5570">story e quadrado</span></a>
+    </div>
+
+    <div role="tablist" aria-label="Seções" style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: #ECE7F4; border-radius: 12px; padding: 4px; gap: 4px">
+      <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="3">
+        <button role="tab" aria-selected="{{ t.sel }}" onClick="{{ t.go }}" style="height: 38px; border: none; border-radius: 9px; font: inherit; font-size: 13px; font-weight: 600; background: {{ t.bg }}; color: #121412">{{ t.label }}</button>
+      </sc-for>
+    </div>
+
+    <sc-if value="{{ isPres }}" hint-placeholder-val="{{ true }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <span style="font-size: 13px; color: #5B6159">Novembro · 10 peladas até agora</span>
+        <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; padding: 6px 14px">
+          <sc-for list="{{ pres }}" as="p" hint-placeholder-count="6">
+            <div style="display: flex; align-items: center; gap: 10px; min-height: 46px; border-bottom: 1px solid #F0ECF6">
+              <span style="width: 22px; font-family: 'Space Grotesk', sans-serif; font-weight: 700; color: #5B6159">{{ p.pos }}</span>
+              <span style="flex: 1; font-size: 14px">{{ p.n }}</span>
+              <span style="width: 90px; height: 8px; background: #ECE7F4; border-radius: 99px; overflow: hidden"><span style="display: block; height: 8px; width: {{ p.w }}; background: #7444D6"></span></span>
+              <span style="width: 40px; text-align: right; font-size: 13px; font-weight: 600">{{ p.v }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isPay }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px">
+          <div style="background: #EFE8FC; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; color: #4F2A9E">Pagos</span><span style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: #4F2A9E">{{ paidCount }}</span></div>
+          <div style="background: #FCEBDD; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; color: #8A3508">Devendo</span><span style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 700; color: #8A3508">{{ owingCount }}</span></div>
+          <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 12px; padding: 10px; display: flex; flex-direction: column; gap: 2px"><span style="font-size: 11px; color: #5B6159">Quadra/mês</span><span style="font-family: 'Space Grotesk', sans-serif; font-size: 16px; font-weight: 700; padding-top: 4px">R$ [VALOR]</span></div>
+        </div>
+        <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; padding: 6px 14px">
+          <sc-for list="{{ pay }}" as="p" hint-placeholder-count="6">
+            <div style="display: flex; align-items: center; gap: 10px; min-height: 50px; border-bottom: 1px solid #F0ECF6">
+              <span style="flex: 1; font-size: 14px">{{ p.n }}</span>
+              <button onClick="{{ p.toggle }}" style="height: 34px; min-width: 92px; border-radius: 99px; border: none; background: {{ p.bg }}; color: {{ p.fg }}; font: inherit; font-size: 12px; font-weight: 700">{{ p.label }}</button>
+            </div>
+          </sc-for>
+        </div>
+        <button style="height: 48px; border-radius: 14px; border: none; background: #1A8F4E; color: #fff; font: inherit; font-size: 15px; font-weight: 600">Cobrar quem deve no Zap</button>
+      </div>
+    </sc-if>
+
+    <sc-if value="{{ isRate }}" hint-placeholder-val="{{ false }}">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; padding: 16px; display: flex; flex-direction: column; align-items: center; gap: 10px">
+          <span style="font-size: 15px; font-weight: 600; text-align: center">Os times de hoje ficaram equilibrados?</span>
+          <div style="display: flex; gap: 4px">
+            <sc-for list="{{ rateStars }}" as="s" hint-placeholder-count="5">
+              <button onClick="{{ s.pick }}" aria-label="{{ s.aria }}" style="width: 48px; height: 48px; border: none; background: transparent; padding: 0">
+                <svg width="38" height="38" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z" fill="{{ s.fill }}"/></svg>
+              </button>
+            </sc-for>
+          </div>
+          <span style="font-size: 12px; color: #5B6159">{{ rateText }}</span>
+        </div>
+        <div style="background: #fff; border: 1px solid #E6E1EF; border-radius: 16px; padding: 6px 14px">
+          <sc-for list="{{ hist }}" as="h" hint-placeholder-count="4">
+            <div style="display: flex; justify-content: space-between; align-items: center; min-height: 46px; border-bottom: 1px solid #F0ECF6; font-size: 14px">
+              <span>{{ h.d }}</span>
+              <span style="color: #5B6159; font-size: 12px">{{ h.g }}</span>
+              <span style="font-weight: 700">{{ h.r }}</span>
+            </div>
+          </sc-for>
+        </div>
+        <span style="font-size: 12px; color: #5B6159">Nota baixa de novo? O app sugere revisar as estrelas de quem mais desequilibrou.</span>
+      </div>
+    </sc-if>
+  </div>
+
+  <nav aria-label="Navegação principal" style="position: absolute; left: 0; right: 0; bottom: 0; height: 78px; background: #fff; border-top: 1px solid #E6E1EF; display: flex; justify-content: space-around; align-items: flex-start; padding-top: 10px">
+    <a href="Main.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: #5B6159; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V21H3z"/></svg>Início</a>
+    <a href="Jogadores.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: #5B6159; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18 14c2.2.6 3.5 2.6 3.5 6"/></svg>Jogadores</a>
+    <a href="Sorteio.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: #5B6159; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h4l10 12h4M3 18h4l3-3.6M14 9.6 17 6h4M18 3l3 3-3 3M18 15l3 3-3 3"/></svg>Sorteio</a>
+    <a href="Partida.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; color: #5B6159; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>Partida</a>
+    <a href="Mais.dc.html" style="display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; color: #7444D6; text-decoration: none; min-width: 60px"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Mais</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+class Component extends DCLogic {
+  constructor(p) {
+    super(p);
+    this.state = { tab: 'pres', rate: 0, paid: { 'Biel': true, 'Ramir': true, 'Taffarel': true, 'Lulu': true, 'Renan': true, 'Thiago Bromana': true, 'Moisés': true, 'Felipe': true, 'Marcelão': true, 'Gilliard': true, 'Budziak': true } };
+  }
+  renderVals() {
+    const tab = this.state.tab;
+    const tabs = [['pres', 'Presença'], ['pay', 'Mensalidade'], ['rate', 'Nota da pelada']].map(([id, label]) => ({
+      label, sel: tab === id ? 'true' : 'false', bg: tab === id ? '#fff' : 'transparent', go: () => this.setState({ tab: id }) }));
+    const pres = [['Alcântara', 10], ['Ramir', 10], ['Biel', 9], ['Lulu', 9], ['Taffarel', 8], ['Renan', 8], ['Thiago Bromana', 7], ['Fubuia', 5]]
+      .map(([n, v], i) => ({ pos: i + 1, n, v: v + '/10', w: v * 10 + '%' }));
+    const names = ['Biel', 'Ramir', 'Taffarel', 'Lulu', 'Renan', 'Thiago Bromana', 'Fubuia', 'Bruninho', 'Peterson', 'João Guilherme'];
+    const pay = names.map((n) => {
+      const ok = !!this.state.paid[n];
+      return { n, label: ok ? 'PAGO' : 'DEVENDO', bg: ok ? '#EFE8FC' : '#FCEBDD', fg: ok ? '#4F2A9E' : '#8A3508',
+        toggle: () => this.setState({ paid: { ...this.state.paid, [n]: !ok } }) };
+    });
+    const all = ['Biel', 'Ramir', 'Taffarel', 'Lulu', 'Renan', 'Thiago Bromana', 'Moisés', 'Felipe', 'Marcelão', 'Gilliard', 'Budziak', 'Fubuia', 'Bruninho', 'Peterson', 'João Guilherme'];
+    const paidCount = all.filter((n) => this.state.paid[n]).length;
+    const r = this.state.rate;
+    const rateStars = [1, 2, 3, 4, 5].map((i) => ({ fill: r >= i ? '#7444D6' : '#D9DCD6', aria: i + ' estrelas', pick: () => this.setState({ rate: i }) }));
+    const texts = ['Toca nas estrelas', 'Muito desequilibrado', 'Desequilibrado', 'Ok', 'Bem equilibrado', 'Perfeito'];
+    const hist = [['Quarta 18/11', 'diferença 0,1', '4,6★'], ['Terça 17/11', 'diferença 0,4', '3,8★'], ['Segunda 16/11', 'diferença 0,2', '4,2★'], ['Quarta 11/11', 'diferença 0,6', '3,1★']]
+      .map(([d, g, rr]) => ({ d, g, r: rr }));
+    return { tabs, isPres: tab === 'pres', isPay: tab === 'pay', isRate: tab === 'rate', pres, pay,
+      paidCount, owingCount: all.length - paidCount, rateStars, rateText: texts[r], hist };
+  }
+}
+</script>
+</body>
+</html>
