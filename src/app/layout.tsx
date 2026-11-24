@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SessaoProvider } from "@/lib/sessao";
 import NavInferior from "@/components/NavInferior";
 import GuardaPerfil from "@/components/GuardaPerfil";
+import RetornoLogin from "@/components/RetornoLogin";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
@@ -30,6 +31,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         <SessaoProvider>
           <Suspense fallback={null}>
             <GuardaPerfil />
+            <RetornoLogin />
           </Suspense>
           {children}
           <Suspense fallback={null}>

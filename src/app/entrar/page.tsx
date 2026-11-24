@@ -22,7 +22,14 @@ export default function EntrarPage() {
   }, [carregando, usuario, router]);
 
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).get("erro") === "google") {
+    const q = new URLSearchParams(window.location.search);
+    const volta = q.get("volta");
+    if (volta && volta.startsWith("/") && !volta.startsWith("//")) {
+      try {
+        window.localStorage.setItem("masorteio:voltar", volta);
+      } catch {}
+    }
+    if (q.get("erro") === "google") {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setErro("Não deu pra entrar com o Google. Tenta de novo.");
     }

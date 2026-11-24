@@ -211,3 +211,24 @@ export function duracaoTexto(seg: number): string {
   if (min < 60) return `${min} min`;
   return `${Math.floor(min / 60)}h${String(min % 60).padStart(2, "0")}`;
 }
+
+// Prêmio de votação num período = quem ganhou mais dias (desempate: total de votos).
+// Com `todosOsDias`, devolve o vencedor de cada dia (repetido se ganhou mais de um).
+export function premioPorDias(d: DadosPeriodo, cat: "craque" | "bagre", todosOsDias = false): string[] {
+  const vitorias = new Map<string, number>();
+  const diarios: string[] = [];
+  for (const e of d.eventos) {
+    const vs = d.votos.filter((v) => v.evento_id === e.id && v.categoria === cat);
+    if (!vs.length) continue;
+    const max = Math.max(...vs.map((v) => v.votos));
+    vs.filter((v) => v.votos === max).forEach((v) => {
+      vitorias.set(v.votado_id, (vitorias.get(v.votado_id) ?? 0) + 1);
+      diarios.push(v.votado_id);
+    });
+  }
+  if (todosOsDias) return diarios;
+  if (!vitorias.size) return [];
+  const total = (id: string) => d.votos.filter((v) => v.votado_id === id && v.categoria === cat).reduce((s, v) => s + v.votos, 0);
+  const ord = [...vitorias.entries()].sort((a, b) => b[1] - a[1] || total(b[0]) - total(a[0]));
+  return ord.filter((x) => x[1] === ord[0][1] && total(x[0]) === total(ord[0][0])).map((x) => x[0]);
+}
