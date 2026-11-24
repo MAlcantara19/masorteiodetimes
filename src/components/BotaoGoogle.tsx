@@ -69,6 +69,35 @@ export default function BotaoGoogle({ onErro }: { onErro: (m: string) => void })
     <>
       <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" onReady={() => setScriptPronto(true)} />
       <div ref={caixa} className="flex min-h-[44px] w-full justify-center" />
+      <PlanoB aoClicar={loginAntigo} />
     </>
+  );
+}
+
+// Se o Google reclamar (ex.: "redirect_uri_mismatch"), dá pra entrar pelo caminho do Supabase,
+// e o admin vê qual endereço precisa cadastrar no Google Cloud.
+function PlanoB({ aoClicar }: { aoClicar: () => void }) {
+  const [aberto, setAberto] = useState(false);
+  const [origem, setOrigem] = useState("");
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOrigem(window.location.origin);
+  }, []);
+  return (
+    <div className="flex flex-col items-center gap-1 text-center text-[13px]">
+      <button type="button" onClick={aoClicar} className="font-semibold text-roxo underline">
+        Deu erro no Google? Entra por aqui
+      </button>
+      <button type="button" onClick={() => setAberto(!aberto)} className="text-xs text-apagado">
+        {aberto ? "Esconder" : "Sou o admin e quero arrumar o erro"}
+      </button>
+      {aberto && (
+        <span className="rounded-xl bg-fundo px-3 py-2 text-left text-xs text-apagado">
+          No Google Cloud → Credenciais → seu cliente OAuth, confira se estes 2 estão cadastrados:
+          <br />• Origens JavaScript: <strong className="break-all text-tinta">{origem}</strong>
+          <br />• URIs de redirecionamento: <strong className="break-all text-tinta">{origem}/auth/google</strong>
+        </span>
+      )}
+    </div>
   );
 }

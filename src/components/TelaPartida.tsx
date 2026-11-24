@@ -65,6 +65,7 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
   const [formPin, setFormPin] = useState({ pin: "", nome: "" });
   const [ocupado, setOcupado] = useState(false);
   const vibrou = useRef<string | null>(null);
+  const ultimaAcao = useRef<{ chave: string; em: number }>({ chave: "", em: 0 });
 
   // ---------- Carregar ----------
   const carregar = useCallback(async () => {
@@ -108,8 +109,10 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
     return () => clearInterval(t);
   }, []);
 
-  // Tempo real: qualquer mudança no banco recarrega a tela.
+  // Tempo real: mudanças deste dia (e do jogo em campo) recarregam a tela.
+  // Os filtros evitam recarregar por causa de gols de outras peladas.
   const eventoId = dados?.evento.id;
+  const partidaAtualId = dados?.partidas[dados.partidas.length - 1]?.id ?? null;
   useEffect(() => {
     if (!eventoId) return;
     const sb = criarClienteSupabase();
@@ -121,8 +124,8 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
     const canal = sb
       .channel(`partida:${eventoId}`, { config: { presence: { key: crypto.randomUUID() } } })
       .on("postgres_changes", { event: "*", schema: "public", table: "partidas", filter: `evento_id=eq.${eventoId}` }, recarregar)
-      .on("postgres_changes", { event: "*", schema: "public", table: "lances" }, recarregar)
-      .on("postgres_changes", { event: "*", schema: "public", table: "pausas" }, recarregar)
+      .on("postgres_changes", { event: "*", schema: "public", table: "lances", filter: `partida_id=eq.${partidaAtualId ?? "00000000-0000-0000-0000-000000000000"}` }, recarregar)
+      .on("postgres_changes", { event: "*", schema: "public", table: "pausas", filter: `partida_id=eq.${partidaAtualId ?? "00000000-0000-0000-0000-000000000000"}` }, recarregar)
       .on("postgres_changes", { event: "*", schema: "public", table: "sorteios", filter: `evento_id=eq.${eventoId}` }, recarregar)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "eventos", filter: `id=eq.${eventoId}` }, recarregar)
       .on("presence", { event: "sync" }, () => setVendo(Math.max(1, Object.keys(canal.presenceState()).length)))
@@ -137,7 +140,7 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
       document.removeEventListener("visibilitychange", voltou);
       sb.removeChannel(canal);
     };
-  }, [eventoId, carregar]);
+  }, [eventoId, partidaAtualId, carregar]);
 
   // Internet voltou: reenvia o que ficou guardado.
   useEffect(() => {
@@ -173,6 +176,26 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
   const chegouGols =
     pelada.regra_fim !== "tempo" && partida && partida.status !== "encerrada" && Math.max(partida.placar_a, partida.placar_b) >= pelada.gols_limite;
 
+  // Mantém a tela do celular acesa enquanto tem jogo (não apaga no meio da partida).
+  const jogoAberto = !!partida && partida.status !== "encerrada";
+  useEffect(() => {
+    if (!jogoAberto || !("wakeLock" in navigator)) return;
+    let trava: { release: () => Promise<void> } | null = null;
+    const pedir = () => {
+      if (document.visibilityState !== "visible") return;
+      (navigator as Navigator & { wakeLock: { request: (t: "screen") => Promise<{ release: () => Promise<void> }> } }).wakeLock
+        .request("screen")
+        .then((t) => (trava = t))
+        .catch(() => {});
+    };
+    pedir();
+    document.addEventListener("visibilitychange", pedir);
+    return () => {
+      document.removeEventListener("visibilitychange", pedir);
+      trava?.release().catch(() => {});
+    };
+  }, [jogoAberto]);
+
   // Fim do tempo: só vibra (uma vez por partida).
   useEffect(() => {
     if (fimDoTempo && partida && partida.status === "rolando" && vibrou.current !== partida.id) {
@@ -191,8 +214,39 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
     else setFolha({ tipo: "pin", depois: f });
   }
 
+  // Mostra o resultado na hora, antes do banco responder (depois o banco confirma).
+  function otimista(nomeAcao: string, d: Record<string, unknown>) {
+    if (!partida || !dados) return;
+    const p = { ...partida };
+    const agoraIso = new Date(Date.now() + dif).toISOString();
+    if (nomeAcao === "gol" || nomeAcao === "gol_contra") {
+      if (d.time === p.time_a) p.placar_a++;
+      else if (d.time === p.time_b) p.placar_b++;
+    } else if (nomeAcao === "menos") {
+      if (d.time === p.time_a) p.placar_a = Math.max(0, p.placar_a - 1);
+      else if (d.time === p.time_b) p.placar_b = Math.max(0, p.placar_b - 1);
+    } else if (nomeAcao === "pausar" && p.status === "rolando") {
+      p.status = "pausado";
+      p.pausado_em = agoraIso;
+    } else if (nomeAcao === "iniciar" && p.status === "aguardando") {
+      p.status = "rolando";
+      p.inicio_em = agoraIso;
+    } else if (nomeAcao === "iniciar" && p.status === "pausado" && p.pausado_em) {
+      p.segundos_pausados += Math.round((Date.now() + dif - new Date(p.pausado_em).getTime()) / 1000);
+      p.status = "rolando";
+      p.pausado_em = null;
+    } else return;
+    setDados({ ...dados, partidas: dados.partidas.map((x) => (x.id === p.id ? p : x)) });
+  }
+
   async function acao(nomeAcao: string, d: Record<string, unknown> = {}) {
     if (!partida) return;
+    // Evita gol duplicado quando o dedo encosta duas vezes sem querer.
+    const chave = nomeAcao + JSON.stringify(d);
+    if (ultimaAcao.current.chave === chave && Date.now() - ultimaAcao.current.em < 1200) return;
+    ultimaAcao.current = { chave, em: Date.now() };
+    otimista(nomeAcao, d);
+    if ((nomeAcao === "gol" || nomeAcao === "gol_contra") && navigator.vibrate) navigator.vibrate(40);
     // Lê o PIN do aparelho na hora (pode ter acabado de ser digitado).
     const p = admin ? null : lerPin(pelada.id);
     const r = await enviarAcao({ partida: partida.id, acao: nomeAcao, dados: d, pin: p?.pin ?? null, nome: p?.nome ?? null });
