@@ -23,6 +23,7 @@ import {
   type Partida,
   type Pausa,
 } from "@/lib/partida";
+import { avisarPush } from "@/lib/push-cliente";
 import Folha from "./Folha";
 import Icone from "./Icone";
 import { Carregando } from "./Topo";
@@ -390,7 +391,12 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
             </button>
             <button
               type="button"
-              onClick={() => comPermissao(() => acao(partida.status === "rolando" ? "pausar" : "iniciar"))}
+              onClick={() =>
+                comPermissao(() => {
+                  if (admin && partida.numero === 1 && partida.status === "aguardando") avisarPush({ pelada_id: pelada.id, tipo: "comecou" });
+                  acao(partida.status === "rolando" ? "pausar" : "iniciar");
+                })
+              }
               className="flex h-12 items-center justify-center gap-2 rounded-xl bg-roxo text-base font-bold"
             >
               <Icone nome={partida.status === "rolando" ? "pausa" : "play"} tamanho={18} />
@@ -548,9 +554,16 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
               </button>
             )
           )}
-          <button type="button" onClick={() => comPermissao(() => setFolha({ tipo: "times" }))} className="h-11 rounded-xl border border-borda bg-white text-sm font-semibold">
-            Trocar os times em campo
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => comPermissao(() => setFolha({ tipo: "times" }))} className="h-11 rounded-xl border border-borda bg-white text-sm font-semibold">
+              Trocar times em campo
+            </button>
+            {admin && (
+              <Link href={`/${pelada.slug}/resultados`} className="flex h-11 items-center justify-center rounded-xl border border-borda bg-white text-sm font-semibold">
+                Resultados do dia
+              </Link>
+            )}
+          </div>
         </div>
       )}
 
