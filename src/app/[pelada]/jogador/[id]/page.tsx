@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
 import { calcularEstatisticas, premioPorDias, type Linha } from "@/lib/estatisticas";
-import { carregarCartas, carregarPerfisPublicos, cartaFinal, posicaoCarta, statsCarta, type InfoCarta, type PerfilPublico } from "@/lib/cartas";
+import { carregarCartas, carregarPerfisPublicos, cartaFinal, posicaoCarta, rotuloEvento, statsCarta, type InfoCarta, type PerfilPublico } from "@/lib/cartas";
 import { curtaDia } from "@/lib/datas";
 import { POSICOES } from "@/lib/elenco";
 import Carta from "@/components/Carta";
@@ -99,7 +99,8 @@ export default function JogadorPage() {
           apelido={nomeCurto(m)}
           posicao={posicaoCarta(m)}
           pelada={pelada.nome}
-          raridade={cartaFinal(info, foto?.estilo_card)}
+          raridade={cartaFinal(info, foto?.estilo_card, m.nascimento)}
+          rotulo={rotuloEvento(info, m.nascimento)}
           cor={foto?.cor_card}
           foto={foto?.foto_url}
           stats={statsCarta(m, l, info?.medalhasMes ?? 0)}

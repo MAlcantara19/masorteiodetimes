@@ -64,6 +64,7 @@ export default function MaisPage() {
       { href: `${b}/album`, titulo: "Álbum", sub: "as cartas de todo mundo e a seleção", icone: "imagem" },
       { href: `${b}/fotos`, titulo: "Fotos do dia", sub: "manda e vê as fotos da pelada", icone: "imagem" },
       { href: `${b}/pagar`, titulo: "Mensalidade (Pix)", sub: "QR Code com o valor e “já paguei”", icone: "dinheiro" },
+      { href: `${b}/retrospectiva`, titulo: `Retrospectiva ${new Date().getFullYear()}`, sub: "o seu ano na pelada, pra postar", icone: "grafico" },
       { href: `/p/${atual.slug}`, titulo: "Página da pelada", sub: "pública, com convite e QR code", icone: "inicio" },
     );
   }

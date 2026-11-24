@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { useSessao } from "@/lib/sessao";
 import { carregarElenco, nomeCurto, type Membro } from "@/lib/pelada";
-import { carregarCartas, cartaFinal, posicaoCarta, statsCarta, type InfoCarta } from "@/lib/cartas";
+import { carregarCartas, cartaFinal, posicaoCarta, rotuloEvento, statsCarta, type InfoCarta } from "@/lib/cartas";
 import { compartilharDataUrl, baixarDataUrl, gerarPng } from "@/lib/imagem";
 import Carta, { ESTILOS, LIBERA, ORDEM_RARIDADE, type Raridade } from "@/components/Carta";
 import Topo, { Carregando } from "@/components/Topo";
@@ -100,7 +100,8 @@ export default function MeuCardPage() {
         apelido={nomeCurto(membro)}
         posicao={posicaoCarta(membro)}
         pelada={v.pelada.nome}
-        raridade={cartaFinal(info, estilo)}
+        raridade={cartaFinal(info, estilo, membro.nascimento)}
+        rotulo={rotuloEvento(info, membro.nascimento)}
         cor={cor}
         foto={perfil?.foto_url}
         stats={statsCarta(membro, info.temporada, info.medalhasMes)}

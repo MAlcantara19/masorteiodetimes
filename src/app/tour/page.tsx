@@ -165,7 +165,7 @@ const PASSOS: Passo[] = [
     dicas: ["Bronze → prata (10 peladas) → ouro (25 ou medalha no mês).", "Preta dourada = destaque da semana. Colorida = jogador do mês."],
     visual: (
       <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-2">
-        {(["bronze", "prata", "ouro", "artilheiro", "garcom", "muralha", "lenda", "destaque", "mes"] as Raridade[]).map((r) => (
+        {(["bronze", "prata", "ouro", "artilheiro", "garcom", "muralha", "lenda", "destaque", "mes", "aniversario"] as Raridade[]).map((r) => (
           <Carta key={r} apelido="Gabi" posicao="ATA" pelada="Piloto" raridade={r} cor="#C8102E" stats={[{ v: 22, l: "JOG" }, { v: 16, l: "VIT" }, { v: 11, l: "GOL" }, { v: 3, l: "AST" }]} escala={0.6} />
         ))}
       </div>
@@ -180,7 +180,12 @@ const PASSOS: Passo[] = [
   {
     titulo: "12. Instala e recebe avisos",
     texto: "Instala na tela inicial (é um app de verdade, abre sem barra do navegador). Ativa as notificações: lembrete de sortear, a pelada começou, votação aberta e medalha nova.",
-    dicas: ["Também tem mensalidade (quem pagou e cobrar no Zap), presença do mês, fotos do dia e página pública com QR code."],
+    dicas: [
+      "Mensalidade com Pix: QR Code com o valor certo e o botão “já paguei”.",
+      "Retrospectiva do ano no estilo Wrapped, com um card de cada jogador pra postar.",
+      "Eventos de carta: carta de aniversário no dia e Semana do Artilheiro.",
+      "Presença do mês, fotos do dia e página pública com convite por QR code.",
+    ],
   },
   {
     titulo: "Bora usar na sua pelada?",

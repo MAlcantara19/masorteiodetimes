@@ -3,7 +3,7 @@
 import { forwardRef } from "react";
 
 // Básicas (mudam sozinhas pela participação) e especiais (liberadas por medalha; o jogador escolhe qual mostrar).
-export type Raridade = "bronze" | "prata" | "ouro" | "destaque" | "mes" | "artilheiro" | "garcom" | "muralha" | "lenda";
+export type Raridade = "bronze" | "prata" | "ouro" | "destaque" | "mes" | "artilheiro" | "garcom" | "muralha" | "lenda" | "aniversario";
 
 type Estilo = { bg: (cor: string) => string; fg: string; accent: string; line: string; photoBg: string; label: string; brilho?: string; textura?: string };
 
@@ -28,6 +28,11 @@ export const ESTILOS: Record<Raridade, Estilo> = {
     bg: () => "linear-gradient(160deg, #0E5A4A 0%, #0A3B33 50%, #04201C 100%)",
     fg: "#E4FFF6", accent: "#7FE8C8", line: "rgba(127,232,200,0.45)", photoBg: "rgba(0,0,0,0.3)", label: "MURALHA",
     textura: "repeating-linear-gradient(0deg, rgba(127,232,200,0.08) 0 1px, transparent 1px 12px), repeating-linear-gradient(90deg, rgba(127,232,200,0.08) 0 1px, transparent 1px 24px)",
+  },
+  aniversario: {
+    bg: () => "linear-gradient(150deg, #FF5FA2 0%, #9B6BFF 50%, #3A1C7A 100%)",
+    fg: "#FFFFFF", accent: "#FFE48A", line: "rgba(255,228,138,0.6)", photoBg: "rgba(255,255,255,0.2)", label: "🎂 ANIVERSÁRIO",
+    textura: "radial-gradient(circle at 15% 20%, #FFE48A 0 2px, transparent 3px), radial-gradient(circle at 80% 30%, #7FE8C8 0 2px, transparent 3px), radial-gradient(circle at 30% 75%, #FFFFFF 0 2px, transparent 3px), radial-gradient(circle at 70% 85%, #FFE48A 0 2px, transparent 3px), radial-gradient(circle at 55% 50%, #FF9AD0 0 2px, transparent 3px)",
   },
   lenda: {
     bg: () => "radial-gradient(circle at 30% 20%, #FFFFFF 0%, #ECE7DD 45%, #CFC6B4 100%)",
@@ -55,9 +60,10 @@ type Props = {
   foto?: string | null;
   stats: { v: number | string; l: string }[];
   escala?: number;
+  rotulo?: string; // troca o selo (ex.: "ARTILHEIRO DA SEMANA")
 };
 
-const Carta = forwardRef<HTMLDivElement, Props>(function Carta({ apelido, posicao, pelada, raridade, cor, foto, stats, escala = 1 }, ref) {
+const Carta = forwardRef<HTMLDivElement, Props>(function Carta({ apelido, posicao, pelada, raridade, cor, foto, stats, escala = 1, rotulo }, ref) {
   const t = ESTILOS[raridade];
   return (
     <div
@@ -98,7 +104,7 @@ const Carta = forwardRef<HTMLDivElement, Props>(function Carta({ apelido, posica
             className="text-center font-bold"
             style={{ fontSize: 8 * escala, letterSpacing: 0.8, padding: `${3 * escala}px ${6 * escala}px`, borderRadius: 99, border: `1px solid ${t.accent}`, color: t.accent, maxWidth: 96 * escala, lineHeight: 1.2 }}
           >
-            {t.label}
+            {rotulo ?? t.label}
           </span>
         </div>
         <div

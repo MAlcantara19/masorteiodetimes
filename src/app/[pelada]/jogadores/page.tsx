@@ -42,12 +42,13 @@ type Rascunho = {
   email: string;
   profile_id: string | null;
   apelidos: string; // outros nomes, separados por vírgula
+  nascimento: string; // "AAAA-MM-DD" (carta de aniversário)
 };
 
 function novoRascunho(): Rascunho {
   return {
     id: null, nome: "", apelido: "", posicao: "Q", sabe_marcar: false, goleiro: false, convidado: false, ativo: true,
-    nota: 3, modo: "simples", atributos: { ...ATRIBUTOS_PADRAO }, email: "", profile_id: null, apelidos: "",
+    nota: 3, modo: "simples", atributos: { ...ATRIBUTOS_PADRAO }, email: "", profile_id: null, apelidos: "", nascimento: "",
   };
 }
 
@@ -103,7 +104,7 @@ export default function JogadoresPage() {
       id: m.id, nome: m.nome, apelido: m.apelido ?? "", posicao: m.posicao, sabe_marcar: m.sabe_marcar, goleiro: m.goleiro,
       convidado: m.convidado, ativo: m.ativo, nota: n ? Number(n.nota_simples) : 3,
       modo: n?.usar_completa ? "completa" : "simples", atributos: n?.atributos ?? { ...ATRIBUTOS_PADRAO },
-      email: "", profile_id: m.profile_id, apelidos: (m.apelidos ?? []).join(", "),
+      email: "", profile_id: m.profile_id, apelidos: (m.apelidos ?? []).join(", "), nascimento: m.nascimento ?? "",
     });
   }
 
@@ -128,8 +129,9 @@ export default function JogadoresPage() {
     const apelidos = [...new Set(edit.apelidos.split(",").map((x) => x.trim()).filter(Boolean))];
     const salvarMembro = (d: object) =>
       edit.id ? sb.from("membros").update(d).eq("id", edit.id).select("id").single() : sb.from("membros").insert(d).select("id").single();
-    let res = await salvarMembro({ ...dados, apelidos });
-    // Banco ainda sem a coluna "apelidos" (SQL 0002 não rodado): salva o resto.
+    let res = await salvarMembro({ ...dados, apelidos, nascimento: edit.nascimento || null });
+    // Banco ainda sem as colunas novas (SQL 0002/0003 não rodados): salva o que der.
+    if (res.error && /nascimento/.test(res.error.message)) res = await salvarMembro({ ...dados, apelidos });
     if (res.error && /apelidos/.test(res.error.message)) res = await salvarMembro(dados);
     if (res.error || !res.data) {
       setSalvando(false);
@@ -258,6 +260,11 @@ export default function JogadoresPage() {
                 className="h-11 rounded-xl border border-borda px-3 text-[15px] font-normal"
               />
               <span className="font-normal text-apagado">Quando colar a lista do Zap, qualquer um desses nomes vira este jogador.</span>
+            </label>
+            <label className="flex flex-col gap-1 text-[13px] font-semibold">
+              Aniversário (opcional)
+              <input type="date" value={edit.nascimento} onChange={(e) => setEdit({ ...edit, nascimento: e.target.value })} className="h-11 rounded-xl border border-borda px-3 text-[15px] font-normal" />
+              <span className="font-normal text-apagado">No dia, a carta dele vira a carta de aniversário 🎂</span>
             </label>
 
             <Escolha

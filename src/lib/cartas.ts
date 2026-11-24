@@ -4,18 +4,39 @@
 // "Destaque da semana" (preta) = craque da semana passada, vale 7 dias;
 // "Jogador do mês" = craque do mês passado (cor escolhida por ele).
 import { criarClienteSupabase } from "@/lib/supabase/client";
-import { calcularEstatisticas, carregarPeriodo, premioPorDias, type DadosPeriodo, type Linha } from "@/lib/estatisticas";
+import { calcularEstatisticas, carregarPeriodo, lideres, premioPorDias, type DadosPeriodo, type Linha } from "@/lib/estatisticas";
 import { inicioMes, inicioSemana, isoDia, deIso } from "@/lib/datas";
 import { type Membro } from "@/lib/pelada";
 import type { Raridade } from "@/components/Carta";
 
 // raridade = a carta automática; desbloqueadas = especiais que o jogador já pode escolher.
-export type InfoCarta = { raridade: Raridade; temporada: Linha | null; medalhasMes: number; desbloqueadas: Raridade[] };
+export type InfoCarta = {
+  raridade: Raridade;
+  temporada: Linha | null;
+  medalhasMes: number;
+  desbloqueadas: Raridade[];
+  artilheiroSemana?: boolean; // evento: artilheiro da semana passada ganha a carta Artilheiro por 7 dias
+};
+
+export function ehAniversario(nascimento?: string | null, hoje = new Date()): boolean {
+  if (!nascimento) return false;
+  const [, m, d] = nascimento.split("-").map(Number);
+  return m === hoje.getMonth() + 1 && d === hoje.getDate();
+}
+
+// Selo especial da carta nos dias de evento.
+export function rotuloEvento(info: InfoCarta | undefined | null, nascimento?: string | null): string | undefined {
+  if (ehAniversario(nascimento)) return "🎂 ANIVERSARIANTE";
+  if (info?.artilheiroSemana && info.raridade !== "destaque" && info.raridade !== "mes") return "ARTILHEIRO DA SEMANA";
+  return undefined;
+}
 
 // Carta que aparece: destaque da semana e jogador do mês sempre ganham; senão a escolhida (se liberada).
-export function cartaFinal(info: InfoCarta | undefined | null, escolhida?: string | null): Raridade {
+export function cartaFinal(info: InfoCarta | undefined | null, escolhida?: string | null, nascimento?: string | null): Raridade {
+  if (ehAniversario(nascimento)) return "aniversario";
   if (!info) return "bronze";
   if (info.raridade === "destaque" || info.raridade === "mes") return info.raridade;
+  if (info.artilheiroSemana) return "artilheiro";
   if (escolhida && (info.desbloqueadas as string[]).includes(escolhida)) return escolhida as Raridade;
   return info.raridade;
 }
@@ -75,7 +96,9 @@ export async function carregarCartas(peladaId: string): Promise<{ cartas: Map<st
   };
   const temporada = filtrar(anoIni, isoDia(hoje));
   const estTemporada = calcularEstatisticas(temporada);
-  const destaque = new Set(premioPorDias(filtrar(isoDia(semanaPassadaIni), isoDia(semanaPassadaFim)), "craque"));
+  const semanaPassada = filtrar(isoDia(semanaPassadaIni), isoDia(semanaPassadaFim));
+  const destaque = new Set(premioPorDias(semanaPassada, "craque"));
+  const artSemana = new Set(lideres([...calcularEstatisticas(semanaPassada).values()], (l) => l.gols).ids);
   const doMes = new Set(premioPorDias(filtrar(isoDia(mesPassadoIni), isoDia(mesPassadoFim)), "craque"));
   const craquesMesAtual = premioPorDias(filtrar(mesAtual, isoDia(hoje)), "craque", true);
 
@@ -95,7 +118,7 @@ export async function carregarCartas(peladaId: string): Promise<{ cartas: Map<st
   for (const id of premioPorDias(temporada, "craque", true)) liberar(id, "lenda");
 
   const cartas = new Map<string, InfoCarta>();
-  const todos = new Set([...estTemporada.keys(), ...medalhasMes.keys(), ...destaque, ...doMes, ...especiais.keys()]);
+  const todos = new Set([...estTemporada.keys(), ...medalhasMes.keys(), ...destaque, ...doMes, ...especiais.keys(), ...artSemana]);
   for (const id of todos) {
     const l = estTemporada.get(id) ?? null;
     const peladas = l?.peladas ?? 0;
@@ -106,7 +129,7 @@ export async function carregarCartas(peladaId: string): Promise<{ cartas: Map<st
     if (destaque.has(id)) raridade = "destaque";
     if (doMes.has(id)) raridade = "mes";
     const base: Raridade[] = raridade === "ouro" ? ["bronze", "prata", "ouro"] : raridade === "prata" ? ["bronze", "prata"] : ["bronze"];
-    cartas.set(id, { raridade, temporada: l, medalhasMes: meds, desbloqueadas: [...base, ...(especiais.get(id) ?? [])] });
+    cartas.set(id, { raridade, temporada: l, medalhasMes: meds, desbloqueadas: [...base, ...(especiais.get(id) ?? [])], artilheiroSemana: artSemana.has(id) });
   }
   return { cartas, temporada };
 }
