@@ -6,7 +6,7 @@
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { calcularEstatisticas, carregarPeriodo, premioPorDias, type DadosPeriodo, type Linha } from "@/lib/estatisticas";
 import { inicioMes, inicioSemana, isoDia, deIso } from "@/lib/datas";
-import type { Membro } from "@/lib/pelada";
+import { type Membro } from "@/lib/pelada";
 import type { Raridade } from "@/components/Carta";
 
 export type InfoCarta = { raridade: Raridade; temporada: Linha | null; medalhasMes: number };
@@ -90,3 +90,34 @@ export async function carregarCartas(peladaId: string): Promise<{ cartas: Map<st
   }
   return { cartas, temporada };
 }
+
+// Pontuação da seleção: votos de craque pesam mais, depois gols, assistências e vitórias.
+const pontuar = (l: Linha) => l.votos.craque * 3 + l.gols * 2 + l.assist * 2 + l.vitorias;
+
+export function montarSelecao(elenco: Membro[], est: Map<string, Linha>) {
+  const com = elenco.filter((m) => est.get(m.id)?.jogos || est.get(m.id)?.goleiro.jogos);
+  const goleiros = com
+    .filter((m) => (est.get(m.id)?.goleiro.jogos ?? 0) > 0)
+    .sort((a, b) => {
+      const la = est.get(a.id) as Linha;
+      const lb = est.get(b.id) as Linha;
+      return lb.votos.goleiro - la.votos.goleiro || la.goleiro.sofridos / la.goleiro.jogos - lb.goleiro.sofridos / lb.goleiro.jogos;
+    });
+  const linha = com.filter((m) => !m.goleiro).sort((a, b) => pontuar(est.get(b.id) as Linha) - pontuar(est.get(a.id) as Linha));
+  const usados = new Set<string>();
+  const pegar = (pref: string[], n: number) => {
+    const r: Membro[] = [];
+    for (const m of [...linha.filter((x) => pref.includes(x.posicao)), ...linha]) {
+      if (r.length === n) break;
+      if (!usados.has(m.id)) {
+        usados.add(m.id);
+        r.push(m);
+      }
+    }
+    return r;
+  };
+  const ataque = pegar(["A"], 2);
+  const meio = pegar(["M", "Q", "D"], 2);
+  return { goleiro: goleiros[0] ?? null, meio, ataque };
+}
+
