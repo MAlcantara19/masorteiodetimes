@@ -110,6 +110,9 @@ export default function EntrarPage() {
         <Link href="/acompanhar" className="flex h-12 items-center justify-center text-[15px] font-semibold text-roxo">
           Só acompanhar, sem entrar
         </Link>
+        <Link href="/tour" className="-mt-2 flex h-10 items-center justify-center text-sm font-semibold text-apagado underline">
+          Primeira vez? Conhece o app no tour
+        </Link>
 
         <InstalarApp />
 

@@ -12,7 +12,7 @@ export default function NavInferior() {
   const { usuario, peladas, ehAdmin } = useSessao();
   const atualSlug = usePeladaAtual();
   if (!usuario) return null;
-  if (caminho.startsWith("/entrar") || caminho.startsWith("/p/") || caminho.endsWith("/telao")) return null;
+  if (caminho.startsWith("/entrar") || caminho.startsWith("/p/") || caminho.startsWith("/tour")) return null;
 
   const atual = peladas.find((p) => p.slug === atualSlug) ?? (peladas.length === 1 ? peladas[0] : null);
   const base = atual ? `/${atual.slug}` : null;

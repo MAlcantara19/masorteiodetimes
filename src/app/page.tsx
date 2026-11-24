@@ -50,6 +50,9 @@ export default function Inicio() {
           <Link href="/entrar" className="flex h-[54px] items-center justify-center rounded-[14px] bg-roxo text-base font-semibold text-white">
             Entrar
           </Link>
+          <Link href="/tour" className="flex h-12 items-center justify-center rounded-[14px] border-2 border-roxo bg-white font-semibold text-roxo">
+            Conhecer o app (tour rápido)
+          </Link>
           <Link href="/acompanhar" className="flex h-12 items-center justify-center rounded-[14px] border border-borda bg-white font-semibold text-roxo">
             Só acompanhar o ao vivo
           </Link>

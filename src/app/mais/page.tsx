@@ -51,6 +51,7 @@ export default function MaisPage() {
   const admin = atual ? ehAdmin(atual.id) : false;
 
   const jogador: Item[] = [
+    { href: "/tour", titulo: "Tour do app", sub: "tudo que o app faz, passo a passo", icone: "estrela" },
     { href: "/perfil", titulo: "Meu perfil", sub: "nome, apelido e foto", icone: "usuario" },
     { href: "/perfil/card", titulo: "Meu card", sub: "sua carta e raridade", icone: "cartao" },
   ];
@@ -77,6 +78,7 @@ export default function MaisPage() {
         ]
       : [];
   const masterItens: Item[] = ehMaster ? [{ href: "/master", titulo: "Painel master", sub: "peladas, admins e acessos", icone: "chave" }] : [];
+  jogador.push({ href: "/cronometro", titulo: "Cronômetro simples", sub: "sem internet, só neste aparelho", icone: "partida" });
 
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 py-6">
