@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { useSessao } from "@/lib/sessao";
 import InstalarApp from "@/components/InstalarApp";
+import BotaoGoogle from "@/components/BotaoGoogle";
 
 export default function EntrarPage() {
   const router = useRouter();
@@ -26,15 +27,6 @@ export default function EntrarPage() {
       setErro("Não deu pra entrar com o Google. Tenta de novo.");
     }
   }, []);
-
-  async function entrarGoogle() {
-    setErro(null);
-    const { error } = await criarClienteSupabase().auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback` },
-    });
-    if (error) setErro("O login com Google ainda não está ligado no Supabase.");
-  }
 
   async function entrarEmail(e: React.FormEvent) {
     e.preventDefault();
@@ -61,16 +53,7 @@ export default function EntrarPage() {
       </div>
 
       <div className="flex flex-col gap-3 p-6">
-        <button
-          type="button"
-          onClick={entrarGoogle}
-          className="flex h-[54px] items-center justify-center gap-2.5 rounded-[14px] border-[1.5px] border-[#D8D0E6] bg-white text-base font-semibold"
-        >
-          <span aria-hidden="true" className="flex h-[22px] w-[22px] items-center justify-center rounded-full border-[1.5px] border-tinta text-[13px] font-bold">
-            G
-          </span>
-          Entrar com Google
-        </button>
+        <BotaoGoogle onErro={setErro} onEntrou={() => router.replace("/")} />
         <button
           type="button"
           onClick={() => setMostrarEmail(!mostrarEmail)}
