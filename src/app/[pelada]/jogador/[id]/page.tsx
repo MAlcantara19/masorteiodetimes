@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
 import { calcularEstatisticas, premioPorDias, type Linha } from "@/lib/estatisticas";
-import { carregarCartas, posicaoCarta, statsCarta, type InfoCarta } from "@/lib/cartas";
+import { carregarCartas, carregarPerfisPublicos, cartaFinal, posicaoCarta, statsCarta, type InfoCarta, type PerfilPublico } from "@/lib/cartas";
 import { curtaDia } from "@/lib/datas";
 import { POSICOES } from "@/lib/elenco";
 import Carta from "@/components/Carta";
@@ -33,7 +33,7 @@ export default function JogadorPage() {
   const [est, setEst] = useState<Map<string, Linha>>(new Map());
   const [porPelada, setPorPelada] = useState<{ rotulo: string; valor: number; detalhe: string }[]>([]);
   const [medalhas, setMedalhas] = useState<Medalha[]>([]);
-  const [foto, setFoto] = useState<{ foto_url: string | null; cor_card: string | null } | null>(null);
+  const [foto, setFoto] = useState<PerfilPublico | null>(null);
   const [outro, setOutro] = useState("");
 
   useEffect(() => {
@@ -68,7 +68,7 @@ export default function JogadorPage() {
   const m = elenco.find((x) => x.id === id);
   useEffect(() => {
     if (!m?.profile_id) return;
-    criarClienteSupabase().from("perfis_publicos").select("foto_url, cor_card").eq("id", m.profile_id).maybeSingle().then(({ data }) => setFoto(data));
+    carregarPerfisPublicos([m.profile_id]).then((mapa) => setFoto(mapa.get(m.profile_id as string) ?? null));
   }, [m?.profile_id]);
 
   const porId = useMemo(() => new Map(elenco.map((x) => [x.id, x])), [elenco]);
@@ -99,7 +99,7 @@ export default function JogadorPage() {
           apelido={nomeCurto(m)}
           posicao={posicaoCarta(m)}
           pelada={pelada.nome}
-          raridade={info?.raridade ?? "bronze"}
+          raridade={cartaFinal(info, foto?.estilo_card)}
           cor={foto?.cor_card}
           foto={foto?.foto_url}
           stats={statsCarta(m, l, info?.medalhasMes ?? 0)}

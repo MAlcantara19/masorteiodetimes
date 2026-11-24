@@ -3,9 +3,8 @@
 // goleiro, 2 no meio e 2 no ataque, montada pela votação + estatísticas do mês.
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { criarClienteSupabase } from "@/lib/supabase/client";
 import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
-import { carregarCartas, montarSelecao, posicaoCarta, statsCarta, type InfoCarta } from "@/lib/cartas";
+import { carregarCartas, carregarPerfisPublicos, cartaFinal, montarSelecao, posicaoCarta, statsCarta, type InfoCarta, type PerfilPublico } from "@/lib/cartas";
 import { calcularEstatisticas, type Linha } from "@/lib/estatisticas";
 import { inicioMes, nomeMes } from "@/lib/datas";
 import { baixarDataUrl, gerarPng } from "@/lib/imagem";
@@ -13,7 +12,7 @@ import Carta, { ORDEM_RARIDADE } from "@/components/Carta";
 import { Escolha } from "@/components/Folha";
 import Topo, { Carregando } from "@/components/Topo";
 
-type Foto = { id: string; foto_url: string | null; cor_card: string | null };
+type Foto = PerfilPublico;
 
 export default function AlbumPage() {
   const { pelada, slug, naoAchou } = usePelada();
@@ -28,11 +27,7 @@ export default function AlbumPage() {
     if (!pelada) return;
     carregarElenco(pelada.id, false).then(async (el) => {
       setElenco(el);
-      const ids = el.map((m) => m.profile_id).filter(Boolean) as string[];
-      if (ids.length) {
-        const { data } = await criarClienteSupabase().from("perfis_publicos").select("id, foto_url, cor_card").in("id", ids);
-        setFotos(new Map(((data ?? []) as Foto[]).map((f) => [f.id, f])));
-      }
+      setFotos(await carregarPerfisPublicos(el.map((m) => m.profile_id).filter(Boolean) as string[]));
     });
     carregarCartas(pelada.id).then(({ cartas: c, temporada }) => {
       setCartas(c);
@@ -77,7 +72,7 @@ export default function AlbumPage() {
         apelido={nomeCurto(m)}
         posicao={posicaoCarta(m)}
         pelada={pelada!.nome}
-        raridade={i?.raridade ?? "bronze"}
+        raridade={cartaFinal(i, f?.estilo_card)}
         cor={f?.cor_card}
         foto={f?.foto_url}
         stats={statsCarta(m, i?.temporada ?? null, i?.medalhasMes ?? 0)}

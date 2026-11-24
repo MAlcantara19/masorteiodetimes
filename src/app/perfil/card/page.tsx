@@ -7,9 +7,9 @@ import { useRouter } from "next/navigation";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { useSessao } from "@/lib/sessao";
 import { carregarElenco, nomeCurto, type Membro } from "@/lib/pelada";
-import { carregarCartas, posicaoCarta, statsCarta, type InfoCarta } from "@/lib/cartas";
+import { carregarCartas, cartaFinal, posicaoCarta, statsCarta, type InfoCarta } from "@/lib/cartas";
 import { compartilharDataUrl, baixarDataUrl, gerarPng } from "@/lib/imagem";
-import Carta, { ESTILOS, ORDEM_RARIDADE } from "@/components/Carta";
+import Carta, { ESTILOS, LIBERA, ORDEM_RARIDADE, type Raridade } from "@/components/Carta";
 import Topo, { Carregando } from "@/components/Topo";
 
 const CORES = ["#C8102E", "#7444D6", "#1A8F4E", "#1B6FD6", "#E07A10", "#121212", "#C2185B", "#0E7C86"];
@@ -21,6 +21,7 @@ export default function MeuCardPage() {
   const [membro, setMembro] = useState<Membro | null>(null);
   const [info, setInfo] = useState<InfoCarta | null>(null);
   const [cor, setCor] = useState<string | null>(null);
+  const [estilo, setEstilo] = useState<string | null>(null);
   const [pacote, setPacote] = useState<"fechado" | "aberto" | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const ref = useRef<HTMLDivElement>(null);
@@ -33,6 +34,7 @@ export default function MeuCardPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (perfil) setCor(perfil.cor_card);
+    if (perfil) setEstilo(perfil.estilo_card ?? null);
   }, [perfil]);
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export default function MeuCardPage() {
     setInfo(null);
     carregarElenco(v.pelada.id, false).then((el) => setMembro(el.find((m) => m.id === v.membro_id) ?? null));
     carregarCartas(v.pelada.id).then(({ cartas }) => {
-      const i = cartas.get(v.membro_id) ?? { raridade: "bronze" as const, temporada: null, medalhasMes: 0 };
+      const i = cartas.get(v.membro_id) ?? { raridade: "bronze" as const, temporada: null, medalhasMes: 0, desbloqueadas: ["bronze" as const] };
       setInfo(i);
       // Subiu de raridade desde a última vez? Abre o pacote.
       try {
@@ -72,6 +74,13 @@ export default function MeuCardPage() {
     recarregar();
   }
 
+  async function escolherEstilo(r: Raridade) {
+    if (!usuario) return;
+    setEstilo(r);
+    const { error } = await criarClienteSupabase().from("profiles").update({ estilo_card: r }).eq("id", usuario.id);
+    if (error) setAviso("Pra salvar o design escolhido, o admin precisa rodar o SQL novo no Supabase (0002).");
+  }
+
   async function imagem(acao: "baixar" | "compartilhar") {
     if (!ref.current) return;
     try {
@@ -91,7 +100,7 @@ export default function MeuCardPage() {
         apelido={nomeCurto(membro)}
         posicao={posicaoCarta(membro)}
         pelada={v.pelada.nome}
-        raridade={info.raridade}
+        raridade={cartaFinal(info, estilo)}
         cor={cor}
         foto={perfil?.foto_url}
         stats={statsCarta(membro, info.temporada, info.medalhasMes)}
@@ -135,6 +144,30 @@ export default function MeuCardPage() {
           <span className="text-apagado">
             Ela muda sozinha: prata com 10 peladas no ano, ouro com 25 ou com uma medalha no mês, carta preta pro destaque da semana e a sua cor pro
             jogador do mês.
+          </span>
+          <span className="pt-1 font-semibold">Design da carta</span>
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+            {ORDEM_RARIDADE.filter((r) => r !== "destaque" && r !== "mes").map((r) => {
+              const liberada = info.desbloqueadas.includes(r);
+              const ativa = cartaFinal(info, estilo) === r;
+              return (
+                <button
+                  key={r}
+                  type="button"
+                  disabled={!liberada}
+                  onClick={() => escolherEstilo(r)}
+                  aria-pressed={ativa}
+                  title={liberada ? ESTILOS[r].label : `Bloqueada: ${LIBERA[r] ?? "jogue mais peladas"}`}
+                  className={`flex w-16 shrink-0 flex-col items-center gap-1 rounded-xl p-1 text-[10px] font-bold ${ativa ? "bg-roxo-suave ring-2 ring-roxo" : ""} ${liberada ? "" : "opacity-40"}`}
+                >
+                  <span className="h-14 w-10 rounded-md" style={{ background: ESTILOS[r].bg(cor || "#C8102E") }} />
+                  {liberada ? ESTILOS[r].label.split(" ")[0] : "🔒"}
+                </button>
+              );
+            })}
+          </div>
+          <span className="text-xs text-apagado">
+            Especiais: artilheiro, garçom, muralha e lenda (craque) liberam quando você ganha a medalha. Destaque da semana e jogador do mês aparecem sozinhos.
           </span>
           <span className="pt-1 font-semibold">Cor escolhida pro jogador do mês</span>
           <div className="flex flex-wrap gap-2">

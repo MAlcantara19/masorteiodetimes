@@ -9,7 +9,16 @@ import { inicioMes, inicioSemana, isoDia, deIso } from "@/lib/datas";
 import { type Membro } from "@/lib/pelada";
 import type { Raridade } from "@/components/Carta";
 
-export type InfoCarta = { raridade: Raridade; temporada: Linha | null; medalhasMes: number };
+// raridade = a carta automática; desbloqueadas = especiais que o jogador já pode escolher.
+export type InfoCarta = { raridade: Raridade; temporada: Linha | null; medalhasMes: number; desbloqueadas: Raridade[] };
+
+// Carta que aparece: destaque da semana e jogador do mês sempre ganham; senão a escolhida (se liberada).
+export function cartaFinal(info: InfoCarta | undefined | null, escolhida?: string | null): Raridade {
+  if (!info) return "bronze";
+  if (info.raridade === "destaque" || info.raridade === "mes") return info.raridade;
+  if (escolhida && (info.desbloqueadas as string[]).includes(escolhida)) return escolhida as Raridade;
+  return info.raridade;
+}
 
 export const POS_CARTA: Record<string, string> = { D: "DEF", M: "MEI", A: "ATA", Q: "QLQ" };
 
@@ -70,14 +79,24 @@ export async function carregarCartas(peladaId: string): Promise<{ cartas: Map<st
   const doMes = new Set(premioPorDias(filtrar(isoDia(mesPassadoIni), isoDia(mesPassadoFim)), "craque"));
   const craquesMesAtual = premioPorDias(filtrar(mesAtual, isoDia(hoje)), "craque", true);
 
-  const { data: med } = await criarClienteSupabase().from("medalhas").select("membro_id, periodo").gte("periodo", mesAtual.slice(0, 7));
+  const ids = new Set(temporada.eventos.length ? [...estTemporada.keys()] : []);
+  const { data: med } = await criarClienteSupabase().from("medalhas").select("membro_id, tipo, periodo").gte("periodo", anoIni.slice(0, 4));
   const medalhasMes = new Map<string, number>();
-  for (const m of med ?? []) if (String(m.periodo).startsWith(mesAtual.slice(0, 7))) medalhasMes.set(m.membro_id, (medalhasMes.get(m.membro_id) ?? 0) + 1);
+  const especiais = new Map<string, Set<Raridade>>();
+  const liberar = (id: string, r: Raridade) => especiais.set(id, (especiais.get(id) ?? new Set<Raridade>()).add(r));
+  for (const m of med ?? []) {
+    if (!ids.has(m.membro_id) && !estTemporada.has(m.membro_id)) continue;
+    if (String(m.periodo).startsWith(mesAtual.slice(0, 7))) medalhasMes.set(m.membro_id, (medalhasMes.get(m.membro_id) ?? 0) + 1);
+    if (m.tipo === "artilheiro") liberar(m.membro_id, "artilheiro");
+    if (m.tipo === "garcom") liberar(m.membro_id, "garcom");
+    if (m.tipo === "muralha") liberar(m.membro_id, "muralha");
+  }
   for (const id of craquesMesAtual) medalhasMes.set(id, (medalhasMes.get(id) ?? 0) + 1);
+  for (const id of premioPorDias(temporada, "craque", true)) liberar(id, "lenda");
 
   const cartas = new Map<string, InfoCarta>();
-  const ids = new Set([...estTemporada.keys(), ...medalhasMes.keys(), ...destaque, ...doMes]);
-  for (const id of ids) {
+  const todos = new Set([...estTemporada.keys(), ...medalhasMes.keys(), ...destaque, ...doMes, ...especiais.keys()]);
+  for (const id of todos) {
     const l = estTemporada.get(id) ?? null;
     const peladas = l?.peladas ?? 0;
     const meds = medalhasMes.get(id) ?? 0;
@@ -86,7 +105,8 @@ export async function carregarCartas(peladaId: string): Promise<{ cartas: Map<st
     if (peladas >= 25 || meds > 0) raridade = "ouro";
     if (destaque.has(id)) raridade = "destaque";
     if (doMes.has(id)) raridade = "mes";
-    cartas.set(id, { raridade, temporada: l, medalhasMes: meds });
+    const base: Raridade[] = raridade === "ouro" ? ["bronze", "prata", "ouro"] : raridade === "prata" ? ["bronze", "prata"] : ["bronze"];
+    cartas.set(id, { raridade, temporada: l, medalhasMes: meds, desbloqueadas: [...base, ...(especiais.get(id) ?? [])] });
   }
   return { cartas, temporada };
 }
@@ -121,3 +141,15 @@ export function montarSelecao(elenco: Membro[], est: Map<string, Linha>) {
   return { goleiro: goleiros[0] ?? null, meio, ataque };
 }
 
+
+export type PerfilPublico = { id: string; foto_url: string | null; cor_card: string | null; estilo_card?: string | null };
+
+// Foto, cor e design de carta de várias pessoas. Funciona mesmo antes do SQL 0002 (sem estilo_card).
+export async function carregarPerfisPublicos(ids: string[]): Promise<Map<string, PerfilPublico>> {
+  if (!ids.length) return new Map();
+  const sb = criarClienteSupabase();
+  const r = await sb.from("perfis_publicos").select("id, foto_url, cor_card, estilo_card").in("id", ids);
+  let lista = (r.data ?? []) as PerfilPublico[];
+  if (r.error) lista = ((await sb.from("perfis_publicos").select("id, foto_url, cor_card").in("id", ids)).data ?? []) as PerfilPublico[];
+  return new Map(lista.map((p) => [p.id, p]));
+}

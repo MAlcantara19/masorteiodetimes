@@ -14,6 +14,7 @@ export type Perfil = {
   is_master: boolean;
   perfil_completo: boolean;
   cor_card: string | null;
+  estilo_card?: string | null;
 };
 
 export type PeladaResumo = {
