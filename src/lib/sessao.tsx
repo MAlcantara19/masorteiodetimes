@@ -94,7 +94,11 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
     }
     sb.auth.getUser().then(({ data }) => carregar(data.user));
     const { data } = sb.auth.onAuthStateChange((evento, s) => {
-      if (evento === "SIGNED_IN" || evento === "SIGNED_OUT" || evento === "USER_UPDATED") carregar(s?.user ?? null);
+      // Importante: não consultar o banco DENTRO deste aviso (a biblioteca do Supabase trava).
+      // O setTimeout joga a consulta pra depois que o aviso termina.
+      if (evento === "SIGNED_IN" || evento === "SIGNED_OUT" || evento === "USER_UPDATED") {
+        setTimeout(() => carregar(s?.user ?? null), 0);
+      }
     });
     return () => data.subscription.unsubscribe();
   }, [carregar]);

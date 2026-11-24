@@ -53,7 +53,7 @@ export default function EntrarPage() {
       </div>
 
       <div className="flex flex-col gap-3 p-6">
-        <BotaoGoogle onErro={setErro} onEntrou={() => router.replace("/")} />
+        <BotaoGoogle onErro={setErro} />
         <button
           type="button"
           onClick={() => setMostrarEmail(!mostrarEmail)}

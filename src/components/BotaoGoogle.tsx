@@ -1,7 +1,9 @@
 "use client";
-// Botão "Entrar com Google" oficial (Google Identity Services).
-// O login acontece no próprio site, então o Google mostra o nome/endereço do app,
-// e não o endereço do Supabase. Sem NEXT_PUBLIC_GOOGLE_CLIENT_ID, cai no login antigo (redirect).
+// Botão "Entrar com Google" oficial (Google Identity Services), no modo redirect:
+// abre a página do Google na mesma aba (sem popup, que o navegador costuma bloquear)
+// e volta pra /auth/google. Como o login acontece no próprio site, o Google mostra
+// o nome/endereço do app, e não o do Supabase.
+// Sem NEXT_PUBLIC_GOOGLE_CLIENT_ID, usa o login antigo pelo Supabase.
 import { useEffect, useRef, useState } from "react";
 import Script from "next/script";
 import { criarClienteSupabase } from "@/lib/supabase/client";
@@ -17,53 +19,28 @@ type Google = {
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
 
-async function sha256(texto: string) {
-  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(texto));
-  return Array.from(new Uint8Array(buf))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-export default function BotaoGoogle({ onErro, onEntrou }: { onErro: (m: string) => void; onEntrou: () => void }) {
+export default function BotaoGoogle({ onErro }: { onErro: (m: string) => void }) {
   const caixa = useRef<HTMLDivElement>(null);
   const [scriptPronto, setScriptPronto] = useState(false);
 
   useEffect(() => {
     const g = (window as unknown as { google?: Google }).google;
     if (!CLIENT_ID || !scriptPronto || !g || !caixa.current) return;
-    let cancelado = false;
-    // O "nonce" amarra o token do Google a esta tentativa de login (segurança).
-    const nonce = crypto.randomUUID();
-    sha256(nonce).then((hash) => {
-      if (cancelado || !caixa.current) return;
-      g.accounts.id.initialize({
-        client_id: CLIENT_ID,
-        nonce: hash,
-        use_fedcm_for_prompt: true,
-        callback: async (resp: { credential: string }) => {
-          const { error } = await criarClienteSupabase().auth.signInWithIdToken({
-            provider: "google",
-            token: resp.credential,
-            nonce,
-          });
-          if (error) onErro("Não deu pra entrar com o Google. Tenta de novo.");
-          else onEntrou();
-        },
-      });
-      g.accounts.id.renderButton(caixa.current, {
-        type: "standard",
-        theme: "outline",
-        size: "large",
-        text: "signin_with",
-        shape: "rectangular",
-        locale: "pt-BR",
-        width: Math.min(caixa.current.offsetWidth || 340, 400),
-      });
+    g.accounts.id.initialize({
+      client_id: CLIENT_ID,
+      ux_mode: "redirect",
+      login_uri: `${window.location.origin}/auth/google`,
     });
-    return () => {
-      cancelado = true;
-    };
-  }, [scriptPronto, onErro, onEntrou]);
+    g.accounts.id.renderButton(caixa.current, {
+      type: "standard",
+      theme: "outline",
+      size: "large",
+      text: "signin_with",
+      shape: "rectangular",
+      locale: "pt-BR",
+      width: Math.min(caixa.current.offsetWidth || 340, 400),
+    });
+  }, [scriptPronto]);
 
   async function loginAntigo() {
     const { error } = await criarClienteSupabase().auth.signInWithOAuth({
