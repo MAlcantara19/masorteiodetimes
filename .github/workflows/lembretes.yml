@@ -1,0 +1,16 @@
+# De hora em hora, chama o app pra mandar os lembretes (sortear, colar lista).
+# Precisa de 2 segredos no GitHub (Settings → Secrets and variables → Actions):
+#   APP_URL     = endereço do app na Vercel, ex.: https://masorteiodetimes.vercel.app
+#   CRON_SECRET = o mesmo valor do CRON_SECRET da Vercel
+name: Lembretes
+on:
+  schedule:
+    - cron: "5 * * * *"
+  workflow_dispatch:
+jobs:
+  lembretes:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chamar /api/cron/lembretes
+        run: |
+          curl -fsS -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.APP_URL }}/api/cron/lembretes"

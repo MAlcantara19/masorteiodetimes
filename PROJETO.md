@@ -248,19 +248,16 @@ O parser:
 
 ---
 
-## 9. Onde estamos e próximos passos
+## 9. Onde estamos
 
-**Etapa 1 — pronta neste repositório (funciona sem login, dados no aparelho):**
-- Next.js + TypeScript + Tailwind com a identidade roxa, manifest pra instalar (PWA básico).
-- `/sortear`: colar a lista do Zap, confirmar nomes parecidos, estrelas de 0,5 em 0,5 com a descrição de cada nível, posição e apelido, quantos times e quantos por time, jogar junto, separar, equilibrar posições, aviso de sobra ou falta, até 4 sorteios com ×, troca tocando em 2 nomes, desfazer, oficial, fundo claro ou escuro, baixar imagem (sem notas), copiar texto e mandar no Zap.
-- `src/lib/lista.ts` (leitor da lista) e `src/lib/sorteio.ts` (algoritmo).
-- `supabase/migrations/0001_inicial.sql` (banco completo, com permissões) e `src/lib/supabase/client.ts`.
+**Versão completa no ar (24/11/2026):** etapas 0 a 8 do `PLANO_CLAUDE_CODE.md` construídas.
 
-**Etapa 2 — próxima (com o Claude Code):**
-1. Criar o projeto no Supabase (supabase.com, plano grátis), rodar `supabase/migrations/0001_inicial.sql` no SQL Editor, copiar `.env.example` para `.env.local` e preencher.
-2. Ligar o login Google (Authentication → Providers) e marcar o seu perfil como `is_master = true`.
-3. Trocar o armazenamento local pelo Supabase (peladas, elenco, notas só pra admin, sorteios).
-4. Partida + ao vivo numa tela só, com o cronômetro calculado a partir do banco, PIN do dia pra visitante, edição dos times em campo.
-5. Deploy na Vercel com as mesmas variáveis.
+- Banco completo: `supabase/migrations/0001_inicial.sql`.
+- Login Google (botão oficial, modo redirect, volta por `/auth/google`) e e-mail/senha gerados pelo master.
+- Peladas, elenco e estrelas; colar lista; sorteio; times com imagem; partida ao vivo com PIN e telão;
+  resultados e fim da pelada; votação, avaliação, campeonato e perfis; cards, álbum e banners;
+  notificações (push), PWA com ícones e tela offline, gestão (presença, mensalidade, nota),
+  página pública com convite/QR, fotos do dia e privacidade.
+- Lembretes automáticos: `.github/workflows/lembretes.yml` (de hora em hora) chama `/api/cron/lembretes`.
 
-Pra começar no Claude Code: abra a pasta `C:\PROJETOS\masorteiodetimes` e peça *"Leia o PROJETO.md e faça a etapa 2"*.
+**Fora do escopo por enquanto:** importar elenco por foto (IA com visão), vídeos, retrospectiva do ano.

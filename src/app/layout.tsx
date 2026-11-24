@@ -6,6 +6,7 @@ import { SessaoProvider } from "@/lib/sessao";
 import NavInferior from "@/components/NavInferior";
 import GuardaPerfil from "@/components/GuardaPerfil";
 import RetornoLogin from "@/components/RetornoLogin";
+import RegistrarSW from "@/components/RegistrarSW";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
@@ -16,6 +17,7 @@ export const metadata: Metadata = {
   description: "Times equilibrados, placar ao vivo e o campeonato da sua pelada.",
   applicationName: "MA Sorteio de Times",
   appleWebApp: { capable: true, title: "MA Sorteio", statusBarStyle: "black-translucent" },
+  icons: { icon: "/icons/192.png", apple: "/icons/apple-180.png" },
 };
 
 export const viewport: Viewport = {
@@ -38,6 +40,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
             <NavInferior />
           </Suspense>
         </SessaoProvider>
+        <RegistrarSW />
         <Analytics />
       </body>
     </html>

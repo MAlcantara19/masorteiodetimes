@@ -8,6 +8,7 @@ import { usePeladaAtual } from "@/lib/pelada-atual";
 import Icone, { type NomeIcone } from "@/components/Icone";
 import Topo, { Carregando } from "@/components/Topo";
 import InstalarApp from "@/components/InstalarApp";
+import AtivarNotificacoes from "@/components/AtivarNotificacoes";
 
 type Item = { href: string; titulo: string; sub: string; icone: NomeIcone };
 
@@ -60,6 +61,8 @@ export default function MaisPage() {
       { href: `/p/${atual.slug}/votar`, titulo: "Votação", sub: "craque, bagre e goleiro", icone: "estrela" },
       { href: `/p/${atual.slug}/avaliar`, titulo: "Avaliar a pelada", sub: "link pós-jogo pra galera", icone: "check" },
       { href: `${b}/album`, titulo: "Álbum", sub: "as cartas de todo mundo e a seleção", icone: "imagem" },
+      { href: `${b}/fotos`, titulo: "Fotos do dia", sub: "manda e vê as fotos da pelada", icone: "imagem" },
+      { href: `/p/${atual.slug}`, titulo: "Página da pelada", sub: "pública, com convite e QR code", icone: "inicio" },
     );
   }
   const adminItens: Item[] =
@@ -89,6 +92,7 @@ export default function MaisPage() {
       <Grupo titulo="Admin da pelada" itens={adminItens} />
       <Grupo titulo="Jogador" itens={jogador} />
 
+      <AtivarNotificacoes />
       <InstalarApp />
 
       <div className="flex flex-col gap-2 pt-2 text-center text-sm">
