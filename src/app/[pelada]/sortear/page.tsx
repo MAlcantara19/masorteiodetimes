@@ -19,7 +19,7 @@ import {
   type Presenca,
   type Regra,
 } from "@/lib/evento";
-import { DIAS, curtaDia, deIso } from "@/lib/datas";
+import { DIAS, curtaDia, deIso, isoDia, proximaPelada } from "@/lib/datas";
 import { Escolha, Interruptor } from "@/components/Folha";
 import Topo, { Carregando } from "@/components/Topo";
 
@@ -68,12 +68,33 @@ export default function SortearPage() {
   // Ordem: confirmados primeiro (na ordem da lista), depois a espera.
   const ordenada = [...linha.filter((p) => p.status === "confirmado"), ...linha.filter((p) => p.status === "espera")];
   const vagas = cfg.times * cfg.porTime;
+  const naLista = new Set(pres.map((p) => p.membro_id));
+  const foraDaLista = elenco.filter((m) => m.ativo && !naLista.has(m.id)).sort((a, b) => nomeCurto(a).localeCompare(nomeCurto(b)));
   const sobra = ordenada.length - vagas;
 
   function mudarCfg(c: Partial<ConfigSorteio>) {
     const n = { ...cfg, ...c };
     setCfg(n);
     if (slug) salvarConfig(slug, n);
+  }
+
+  // Sem lista do Zap: cria o dia da pelada vazio pra escolher na mão quem joga.
+  async function escolherNaMao() {
+    if (!pelada) return;
+    const prox = proximaPelada(pelada.dia_semana, pelada.horario);
+    const dia = prox ? isoDia(prox) : isoDia(new Date());
+    const { error } = await criarClienteSupabase().from("eventos").insert({ pelada_id: pelada.id, data: dia, horario: pelada.horario?.slice(0, 5) ?? null, status: "lista" });
+    if (error) return setErro("Não deu pra criar o dia da pelada.");
+    carregar();
+  }
+
+  // Põe alguém do elenco no jogo de hoje (marcar "disponível").
+  async function adicionar(m: Membro) {
+    if (!evento) return;
+    const ordem = Math.max(0, ...pres.map((p) => p.ordem ?? 0)) + 1;
+    const nova: Presenca = { membro_id: m.id, status: "confirmado", goleiro: m.goleiro, ordem };
+    setPres([...pres, nova]);
+    await criarClienteSupabase().from("presencas").upsert({ evento_id: evento.id, ...nova });
   }
 
   async function mudarStatus(membroId: string, status: Presenca["status"]) {
@@ -148,7 +169,11 @@ export default function SortearPage() {
         <Link href={`/${slug}/lista`} className="flex h-14 items-center justify-center rounded-2xl bg-roxo text-lg font-bold text-white">
           Colar lista do WhatsApp
         </Link>
-        <p className="text-center text-sm text-apagado">Cola a lista do grupo primeiro pra saber quem joga hoje.</p>
+        <button type="button" onClick={escolherNaMao} className="h-14 rounded-2xl border-2 border-roxo bg-white text-lg font-bold text-roxo">
+          Escolher na mão quem joga
+        </button>
+        <p className="text-center text-sm text-apagado">Sem lista? Escolhe direto do elenco, marcando quem está disponível hoje.</p>
+        {erro && <p className="rounded-xl bg-alerta-suave px-3 py-2 text-sm text-alerta-escuro">{erro}</p>}
       </main>
     );
   }
@@ -228,6 +253,19 @@ export default function SortearPage() {
                 {nome(p.membro_id)}
               </button>
             ))}
+          </div>
+        )}
+        {foraDaLista.length > 0 && (
+          <div className="flex flex-col gap-2 border-t border-borda pt-2">
+            <span className="text-xs text-apagado">Do elenco (toca pra marcar que está disponível hoje):</span>
+            <div className="flex flex-wrap gap-2">
+              {foraDaLista.map((m) => (
+                <button key={m.id} type="button" onClick={() => adicionar(m)} className="h-8 rounded-full border border-borda bg-white px-3 text-sm">
+                  + {m.goleiro ? "🧤 " : ""}
+                  {nomeCurto(m)}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         {goleiros.length > 0 && (

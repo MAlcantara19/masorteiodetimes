@@ -319,6 +319,9 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
             {dados?.sorteio ? "Ver times e começar" : "Montar sorteio"}
           </Link>
         )}
+        <Link href={`/cronometro?min=${pelada.minutos}`} className="flex h-12 items-center justify-center rounded-2xl border border-borda bg-white font-semibold">
+          ⏱️ Usar só o cronômetro (sem internet)
+        </Link>
       </div>
     );
   }
@@ -608,6 +611,9 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
               </button>
             )
           )}
+          <Link href={`/cronometro?min=${pelada.minutos}`} className="text-center text-xs font-semibold text-apagado underline">
+            Internet ruim? Usar só o cronômetro do aparelho
+          </Link>
           <div className="grid grid-cols-2 gap-2">
             <button type="button" onClick={() => comPermissao(() => setFolha({ tipo: "times" }))} className="h-11 rounded-xl border border-borda bg-white text-sm font-semibold">
               Trocar times em campo

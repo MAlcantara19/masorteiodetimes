@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSessao } from "@/lib/sessao";
 
-const LIVRES = ["/perfil", "/entrar", "/auth", "/p/", "/privacidade", "/acompanhar"];
+const LIVRES = ["/perfil", "/entrar", "/auth", "/p/", "/privacidade", "/acompanhar", "/cronometro", "/tour"];
 
 export default function GuardaPerfil() {
   const { carregando, usuario, perfil } = useSessao();

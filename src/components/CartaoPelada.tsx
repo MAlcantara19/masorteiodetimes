@@ -46,7 +46,7 @@ export default function CartaoPelada({ pelada }: { pelada: PeladaResumo }) {
   let destino = `/${pelada.slug}/jogo`;
   let acao = "Ver partida →";
   if (admin) {
-    if (!evento) [destino, acao] = [`/${pelada.slug}/lista`, "Colar lista →"];
+    if (!evento) [destino, acao] = [`/${pelada.slug}/sortear`, "Montar sorteio →"];
     else if (evento.status === "lista") [destino, acao] = [`/${pelada.slug}/sortear`, "Sortear →"];
     else if (evento.status === "sorteado") [destino, acao] = [`/${pelada.slug}/times`, "Ver times →"];
     else if (evento.status === "encerrado") [destino, acao] = [`/${pelada.slug}/fim`, "Ver fim da pelada →"];
