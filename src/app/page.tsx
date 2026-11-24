@@ -8,6 +8,7 @@ import { dataExtenso } from "@/lib/datas";
 import { Carregando } from "@/components/Topo";
 import CartaoPelada from "@/components/CartaoPelada";
 import UltimaPelada from "@/components/UltimaPelada";
+import AoVivoAgora from "@/components/AoVivoAgora";
 
 export default function Inicio() {
   const { carregando, usuario, perfil, peladas, ehMaster, ehAdmin } = useSessao();
@@ -43,6 +44,8 @@ export default function Inicio() {
           </Link>
         )}
       </header>
+
+      <AoVivoAgora />
 
       {!usuario && (
         <div className="flex flex-col gap-3">

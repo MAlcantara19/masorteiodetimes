@@ -77,7 +77,12 @@ export default function MaisPage() {
           { href: `${b}/config`, titulo: "Configurar pelada", sub: "horário, regra, PIN do ao vivo", icone: "lapis" },
         ]
       : [];
-  const masterItens: Item[] = ehMaster ? [{ href: "/master", titulo: "Painel master", sub: "peladas, admins e acessos", icone: "chave" }] : [];
+  const masterItens: Item[] = ehMaster
+    ? [
+        { href: "/master", titulo: "Painel master", sub: "peladas, admins e acessos", icone: "chave" },
+        { href: "/marca", titulo: "Arte da marca", sub: "post, story, logo e capa pra divulgar", icone: "imagem" },
+      ]
+    : [];
   jogador.push({ href: "/cronometro", titulo: "Cronômetro simples", sub: "sem internet, só neste aparelho", icone: "partida" });
 
   return (
