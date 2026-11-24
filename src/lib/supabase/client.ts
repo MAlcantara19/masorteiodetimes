@@ -1,9 +1,13 @@
-// Cliente do Supabase no navegador. Usado a partir da etapa 2 (login e dados na nuvem).
+// Cliente do Supabase no navegador. Usa a chave publicável: quem protege os dados é o RLS do banco.
 import { createBrowserClient } from "@supabase/ssr";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { envSupabase } from "./env";
 
-export function criarClienteSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const chave = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !chave) throw new Error("Faltam NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY no .env.local");
-  return createBrowserClient(url, chave);
+let cliente: SupabaseClient | null = null;
+
+export function criarClienteSupabase(): SupabaseClient {
+  if (cliente) return cliente;
+  const { url, chave } = envSupabase();
+  cliente = createBrowserClient(url, chave);
+  return cliente;
 }

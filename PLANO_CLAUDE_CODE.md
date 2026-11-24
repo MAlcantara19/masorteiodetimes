@@ -28,8 +28,8 @@ Leia antes, nesta ordem:
 Guiar o Matheus em:
 
 1. Criar o projeto no **Supabase** (supabase.com, plano grátis, região São Paulo).
-2. Rodar `supabase/schema.sql` no SQL Editor. Revisar o schema antes: completar com as tabelas da seção 5 do `PROJETO.md` que faltam (votações, votos, avaliações, pagamentos, medalhas, fotos, push_subs). Prefira migrations em `supabase/migrations/`.
-3. Copiar `.env.example` pra `.env.local` com `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` e (só servidor) `SUPABASE_SERVICE_ROLE_KEY`.
+2. Rodar `supabase/migrations/0001_inicial.sql` no SQL Editor (banco completo, com todas as tabelas da seção 5 do `PROJETO.md`).
+3. Copiar `.env.example` pra `.env.local` com `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` e (só servidor) `SUPABASE_SECRET_KEY`.
 4. Login Google: criar as credenciais OAuth no Google Cloud e ligar em Supabase → Authentication → Providers. Também ligar o login por e-mail e senha.
 5. Depois do primeiro login dele, marcar `is_master = true` no perfil (SQL pronto pra colar).
 6. Gerar as chaves **VAPID** pro push (`npx web-push generate-vapid-keys`) e guardar no `.env.local`.
