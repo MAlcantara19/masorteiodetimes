@@ -29,6 +29,8 @@ export default function MasterPage() {
   const [gerada, setGerada] = useState<{ email: string; senha: string } | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [emailMaster, setEmailMaster] = useState("");
+  const [avisoMaster, setAvisoMaster] = useState<string | null>(null);
 
   useEffect(() => {
     if (carregando) return;
@@ -115,6 +117,17 @@ export default function MasterPage() {
     carregarPelada(pelada.id);
   }
 
+  // Masters: quem manda em tudo. Só dá pra promover quem já entrou no app pelo menos uma vez.
+  async function mudarMaster(email: string, virar: boolean) {
+    const alvo = perfis.find((p) => (p.email ?? "").toLowerCase() === email.trim().toLowerCase());
+    if (!alvo) return setAvisoMaster("Esse e-mail ainda não entrou no app. Peça pra entrar uma vez (Google ou e-mail) e tente de novo.");
+    const { error } = await criarClienteSupabase().from("profiles").update({ is_master: virar }).eq("id", alvo.id);
+    if (error) return setAvisoMaster("Não deu pra mudar.");
+    setAvisoMaster(virar ? `${alvo.email} agora é master.` : `${alvo.email} não é mais master.`);
+    setEmailMaster("");
+    carregarPeladas();
+  }
+
   async function remover(m: MembroLinha) {
     if (!pelada) return;
     await criarClienteSupabase().from("membros").update({ papel: "jogador" }).eq("id", m.id);
@@ -128,6 +141,44 @@ export default function MasterPage() {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-6">
       <Topo titulo="Painel master" sub="Só você vê esta tela" voltar="/mais" direita={<span className="rounded-full bg-noite px-2.5 py-1 text-xs font-bold text-roxo-claro">MASTER</span>} />
+
+      <section className="flex flex-col gap-2 rounded-2xl bg-noite p-4 text-white">
+        <span className="text-xs font-bold tracking-wider text-roxo-claro">MASTERS</span>
+        {perfis
+          .filter((p) => p.is_master)
+          .map((p) => (
+            <div key={p.id} className="flex items-center justify-between gap-2 text-sm">
+              <span className="truncate">
+                {p.apelido || p.nome || "Sem nome"} <span className="text-[#CFC7E0]">· {p.email}</span>
+              </span>
+              {p.id !== usuario?.id && (
+                <button type="button" onClick={() => p.email && mudarMaster(p.email, false)} className="shrink-0 text-xs font-semibold text-[#CFC7E0] underline">
+                  Tirar
+                </button>
+              )}
+            </div>
+          ))}
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            mudarMaster(emailMaster, true);
+          }}
+          className="flex gap-2 pt-1"
+        >
+          <input
+            type="email"
+            required
+            value={emailMaster}
+            onChange={(e) => setEmailMaster(e.target.value)}
+            placeholder="e-mail de outra conta sua"
+            className="h-10 min-w-0 flex-1 rounded-xl bg-white/10 px-3 text-sm text-white placeholder:text-[#9C93B3]"
+          />
+          <button type="submit" className="h-10 shrink-0 rounded-xl bg-roxo px-3 text-sm font-semibold">
+            Tornar master
+          </button>
+        </form>
+        {avisoMaster && <span className="text-[13px] text-roxo-claro">{avisoMaster}</span>}
+      </section>
 
       <div role="tablist" aria-label="Peladas" className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1">
         {peladas.map((p) => (
