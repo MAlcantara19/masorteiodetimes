@@ -40,6 +40,8 @@ type Rascunho = {
   convidado: boolean;
   ativo: boolean;
   mensalista: boolean; // (SQL 0007) entra direto na lista da semana
+  admin: boolean; // ajuda a organizar a pelada (mesmos poderes do admin)
+  sorteador: boolean; // (SQL 0010) sorteador oficial: no dia de jogo o Início dele vira o passo a passo
   nota: number;
   modo: "simples" | "completa";
   atributos: Atributos;
@@ -51,7 +53,7 @@ type Rascunho = {
 
 function novoRascunho(): Rascunho {
   return {
-    id: null, nome: "", apelido: "", posicao: "Q", sabe_marcar: false, goleiro: false, convidado: false, ativo: true, mensalista: false,
+    id: null, nome: "", apelido: "", posicao: "Q", sabe_marcar: false, goleiro: false, convidado: false, ativo: true, mensalista: false, admin: false, sorteador: false,
     nota: 3, modo: "simples", atributos: { ...ATRIBUTOS_PADRAO }, email: "", profile_id: null, apelidos: "", nascimento: "",
   };
 }
@@ -108,7 +110,7 @@ export default function JogadoresPage() {
     const n = m.nota;
     setEdit({
       id: m.id, nome: m.nome, apelido: m.apelido ?? "", posicao: m.posicao, sabe_marcar: m.sabe_marcar, goleiro: m.goleiro,
-      convidado: m.convidado, ativo: m.ativo, mensalista: !!m.mensalista, nota: n ? Number(n.nota_simples) : 3,
+      convidado: m.convidado, ativo: m.ativo, mensalista: !!m.mensalista, admin: m.papel === "admin", sorteador: !!m.sorteador, nota: n ? Number(n.nota_simples) : 3,
       modo: n?.usar_completa ? "completa" : "simples", atributos: n?.atributos ?? { ...ATRIBUTOS_PADRAO },
       email: "", profile_id: m.profile_id, apelidos: (m.apelidos ?? []).join(", "), nascimento: m.nascimento ?? "",
     });
@@ -124,6 +126,7 @@ export default function JogadoresPage() {
   async function salvar() {
     if (!edit || !pelada || !usuario) return;
     if (!edit.nome.trim()) return setAviso("Coloca o nome do jogador.");
+    if (edit.id && edit.profile_id === usuario.id && !edit.admin && !confirm("Tirar o seu próprio admin? Você deixa de organizar esta pelada.")) return;
     setSalvando(true);
     const sb = criarClienteSupabase();
     let profileId = edit.profile_id;
@@ -137,6 +140,7 @@ export default function JogadoresPage() {
     const dados = {
       pelada_id: pelada.id, nome: edit.nome.trim(), apelido: edit.apelido.trim() || null, posicao: edit.posicao,
       sabe_marcar: edit.sabe_marcar, goleiro: edit.goleiro, convidado: edit.convidado, ativo: edit.ativo, profile_id: profileId,
+      papel: edit.admin ? "admin" : "jogador",
     };
     const apelidos = [...new Set(edit.apelidos.split(",").map((x) => x.trim()).filter(Boolean))];
     const salvarMembro = (d: object) =>
@@ -151,6 +155,7 @@ export default function JogadoresPage() {
     }
     // Mensalista e e-mail do Google (SQL 0007: antes dele, só não salva essas duas coisas).
     await sb.from("membros").update({ mensalista: edit.mensalista }).eq("id", res.data.id);
+    await sb.from("membros").update({ sorteador: edit.sorteador }).eq("id", res.data.id);
     const emailRes = edit.email.trim()
       ? await sb.from("membros_email").upsert({ membro_id: res.data.id, email: edit.email.trim().toLowerCase() })
       : await sb.from("membros_email").delete().eq("membro_id", res.data.id);
@@ -268,6 +273,7 @@ export default function JogadoresPage() {
                   {m.goleiro && <span className="ml-1.5 rounded bg-roxo-suave px-1.5 py-0.5 text-[11px] text-roxo-escuro">GOL</span>}
                   {m.convidado && <span className="ml-1.5 rounded bg-alerta-suave px-1.5 py-0.5 text-[11px] text-alerta-escuro">convidado</span>}
                   {m.papel === "admin" && <span className="ml-1.5 rounded bg-noite px-1.5 py-0.5 text-[11px] text-white">admin</span>}
+                  {m.sorteador && <span className="ml-1.5 text-[12px]" title="Sorteador oficial">🎲</span>}
                   {m.mensalista && <span className="ml-1.5 rounded bg-roxo-suave px-1.5 py-0.5 text-[11px] font-bold text-roxo-escuro">MENSAL</span>}
                   {m.profile_id && <span className="ml-1.5 text-[12px]" title="Ligado a uma conta">🔗</span>}
                 </span>
@@ -371,6 +377,8 @@ export default function JogadoresPage() {
                   ["sabe_marcar", "Sabe marcar"],
                   ["goleiro", "É goleiro"],
                   ["mensalista", "Mensalista (já entra na lista toda semana)"],
+                  ["admin", "Admin (ajuda a organizar: lista, sorteio, placar)"],
+                  ["sorteador", "Sorteador oficial (o dia de jogo fica com ele)"],
                   ["convidado", "Convidado (não é fixo)"],
                   ["ativo", "Ativo no elenco"],
                 ] as const

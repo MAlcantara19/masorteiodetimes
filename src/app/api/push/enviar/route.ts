@@ -2,10 +2,10 @@
 // Só admin da pelada pode pedir; quem recebe é decidido aqui no servidor.
 import { NextResponse, type NextRequest } from "next/server";
 import { clienteAdmin, clienteServidor } from "@/lib/supabase/server";
-import { enviarPara, perfisDaPelada } from "@/lib/push-servidor";
+import { ACOES_LISTA, enviarPara, perfisDaPelada } from "@/lib/push-servidor";
 
 export async function POST(request: NextRequest) {
-  const corpo = (await request.json().catch(() => null)) as { pelada_id?: string; tipo?: string; membros?: string[]; titulo?: string; texto?: string } | null;
+  const corpo = (await request.json().catch(() => null)) as { pelada_id?: string; tipo?: string; membros?: string[]; titulo?: string; texto?: string; evento_id?: string } | null;
   if (!corpo?.pelada_id || !corpo.tipo) return NextResponse.json({ erro: "Pedido incompleto." }, { status: 400 });
 
   const sb = await clienteServidor();
@@ -25,6 +25,13 @@ export async function POST(request: NextRequest) {
   } else if (corpo.tipo === "votacao") {
     const ids = await perfisDaPelada(corpo.pelada_id);
     enviados = await enviarPara(ids, { titulo: `🗳️ Votação aberta · ${pelada.nome}`, corpo: "Vota no craque, no bagre e no melhor goleiro do dia.", url: `/p/${pelada.slug}/votar`, tag: "votacao" }, origem);
+  } else if (corpo.tipo === "lista" && corpo.evento_id) {
+    // O admin lançou a lista: todo mundo da pelada recebe, já com "✋ Vou / Não vou".
+    const { data: ev } = await clienteAdmin().from("eventos").select("id, pelada_id, status").eq("id", corpo.evento_id).maybeSingle();
+    if (ev && ev.pelada_id === corpo.pelada_id && ev.status === "lista") {
+      const ids = await perfisDaPelada(corpo.pelada_id);
+      enviados = await enviarPara(ids.filter((id) => id !== eu.user!.id), { titulo: `📋 A lista da ${pelada.nome} saiu!`, corpo: "Vai jogar? Responde aqui mesmo.", url: `/p/${pelada.slug}/lista`, tag: `listaapp-${corpo.pelada_id}`, acoes: ACOES_LISTA, evento: ev.id }, origem);
+    }
   } else if (corpo.tipo === "aviso" && corpo.titulo) {
     // Aviso que o admin escreveu na tela de avisos.
     const ids = await perfisDaPelada(corpo.pelada_id);

@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toPng } from "html-to-image";
 import { comTemaClaro } from "@/lib/imagem";
+import { temRecurso } from "@/lib/planos";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { useSessao } from "@/lib/sessao";
 import { carregarElenco, nomeCurto, notaDoMembro, usePelada, type Membro } from "@/lib/pelada";
@@ -30,7 +31,7 @@ import { chaveDupla } from "@/lib/sorteio";
 export default function TimesPage() {
   const router = useRouter();
   const { pelada, slug, naoAchou } = usePelada();
-  const { carregando, usuario, ehAdmin } = useSessao();
+  const { carregando, usuario, ehAdmin, ehMaster } = useSessao();
   const admin = pelada ? ehAdmin(pelada.id) : false;
   const [evento, setEvento] = useState<Evento | null | undefined>(undefined);
   const [elenco, setElenco] = useState<Membro[]>([]);
@@ -213,8 +214,8 @@ export default function TimesPage() {
         linha: ordenada.map((p) => porId.get(p.membro_id)).filter((m): m is Membro => !!m),
         goleiros: pres.filter((p) => p.goleiro && p.status !== "saiu").map((p) => porId.get(p.membro_id)).filter((m): m is Membro => !!m),
         elenco,
-        cfg: lerConfig(slug),
-        regras: (r ?? []) as Regra[],
+        cfg: temRecurso(pelada!, "sorteio_avancado", ehMaster) ? lerConfig(slug) : { ...lerConfig(slug), completarReserva: false, naoRepetir: false },
+        regras: temRecurso(pelada!, "sorteio_avancado", ehMaster) ? ((r ?? []) as Regra[]) : [],
         usuarioId: usuario.id,
       });
     } catch {

@@ -6,7 +6,7 @@ import type { PeladaResumo } from "@/lib/sessao";
 import { temRecurso, type Recurso } from "@/lib/planos";
 
 // Itens que dependem do plano da pelada.
-const DO_PLANO: Record<string, Recurso> = { pagar: "pix", cobrar: "pix", retrospectiva: "retrospectiva", banners: "banners", fotos: "fotos", album: "album", confrontos: "confrontos_admin", caixa: "caixa", telao: "telao" };
+const DO_PLANO: Record<string, Recurso> = { listaapp: "lista_app", pagar: "pix", cobrar: "pix", retrospectiva: "retrospectiva", banners: "banners", fotos: "fotos", album: "album", confrontos: "confrontos_admin", caixa: "caixa", telao: "telao" };
 
 // `grupo`: o menu junta os itens por assunto (cada grupo abre e fecha).
 export type ItemMenu = { id: string; href: string; titulo: string; sub: string; icone: NomeIcone; grupo?: string };
@@ -60,6 +60,7 @@ export function montarMenu(atual: PeladaResumo | null, admin: boolean, ehMaster:
     { id: "card", href: "/perfil/card", titulo: "Meu card", sub: "sua carta e raridade", icone: "cartao", grupo: "Você" },
     { id: "perfil", href: "/perfil", titulo: "Meu perfil", sub: "cadastro, notificações e tema", icone: "usuario", grupo: "Você" },
     { id: "cronometro", href: "/cronometro", titulo: "Cronômetro simples", sub: "sem internet, só neste aparelho", icone: "partida", grupo: "Ferramentas" },
+    { id: "criar", href: "/criar", titulo: "Criar uma pelada", sub: "grátis, com 15 dias do Completo", icone: "somar", grupo: "Ferramentas" },
     { id: "achar", href: "/peladas", titulo: "Achar pelada", sub: "peladas abertas, horários e contato", icone: "busca", grupo: "Ferramentas" },
     { id: "acompanhar", href: "/acompanhar", titulo: "Acompanhar outras peladas", sub: "ao vivo de qualquer pelada", icone: "link", grupo: "Ferramentas" },
     { id: "tour", href: "/tour", titulo: "Tour do app", sub: "tudo que o app faz, passo a passo", icone: "estrela", grupo: "Ferramentas" },

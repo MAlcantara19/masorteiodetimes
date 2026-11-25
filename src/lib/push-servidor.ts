@@ -3,7 +3,12 @@ import "server-only";
 import * as webpush from "web-push";
 import { clienteAdmin } from "@/lib/supabase/server";
 
-export type Mensagem = { titulo: string; corpo: string; url: string; tag?: string };
+// `acoes` + `evento`: botões na notificação (✋ Vou / Não vou) que respondem sem abrir o app.
+export type Mensagem = { titulo: string; corpo: string; url: string; tag?: string; acoes?: { action: string; title: string }[]; evento?: string };
+export const ACOES_LISTA = [
+  { action: "vou", title: "✋ Vou" },
+  { action: "naovou", title: "Não vou" },
+];
 
 function configurar(origem: string): boolean {
   const pub = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;

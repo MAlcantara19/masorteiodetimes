@@ -26,11 +26,12 @@ import { DIAS, curtaDia, deIso, isoDia, proximaPelada } from "@/lib/datas";
 import { Escolha, Interruptor } from "@/components/Folha";
 import Topo, { Carregando } from "@/components/Topo";
 import { linkZap } from "@/lib/resumo-zap";
+import { temRecurso } from "@/lib/planos";
 
 export default function SortearPage() {
   const router = useRouter();
   const { pelada, slug, naoAchou } = usePelada();
-  const { carregando, usuario, ehAdmin } = useSessao();
+  const { carregando, usuario, ehAdmin, ehMaster } = useSessao();
   const admin = pelada ? ehAdmin(pelada.id) : false;
   const [evento, setEvento] = useState<Evento | null | undefined>(undefined);
   const [elenco, setElenco] = useState<Membro[]>([]);
@@ -79,7 +80,10 @@ export default function SortearPage() {
   const naLista = new Set(pres.map((p) => p.membro_id));
   const foraDaLista = elenco.filter((m) => m.ativo && !naLista.has(m.id)).sort((a, b) => nomeCurto(a).localeCompare(nomeCurto(b)));
   const sobra = ordenada.length - vagas;
-  const reservas = cfg.completarReserva && sobra < 0 ? -sobra : 0;
+  // Plano Grátis: sorteio equilibrado pelas notas, sem as regras extras.
+  const avancado = pelada ? temRecurso(pelada, "sorteio_avancado", ehMaster) : false;
+  const cfgUsada: ConfigSorteio = avancado ? cfg : { ...cfg, completarReserva: false, naoRepetir: false };
+  const reservas = cfgUsada.completarReserva && sobra < 0 ? -sobra : 0;
   const podeSortear = ordenada.length > 0 && ordenada.length + reservas >= cfg.times * 2;
 
   function mudarCfg(c: Partial<ConfigSorteio>) {
@@ -132,6 +136,7 @@ export default function SortearPage() {
     if (sobe) {
       if (sobe.status === "espera") await sb.from("presencas").update({ status: "confirmado" }).eq("evento_id", evento.id).eq("membro_id", sobe.membro_id);
       setChamado({ entrou: sobe.membro_id, saiu: membroId });
+      fetch("/api/lista/vaga", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ evento_id: evento.id, membro_id: sobe.membro_id }) }).catch(() => {});
     }
   }
 
@@ -191,8 +196,8 @@ export default function SortearPage() {
         linha: ordenada.map((p) => porId.get(p.membro_id)).filter((m): m is Membro => !!m),
         goleiros: goleiros.map((p) => porId.get(p.membro_id)).filter((m): m is Membro => !!m),
         elenco,
-        cfg,
-        regras,
+        cfg: cfgUsada,
+        regras: avancado ? regras : [],
         usuarioId: usuario.id,
       });
     } catch (e) {
@@ -371,9 +376,9 @@ export default function SortearPage() {
         <p className={`mt-1 rounded-xl px-3 py-2 text-sm font-semibold ${sobra === 0 ? "bg-roxo-suave text-roxo-escuro" : "bg-alerta-suave text-alerta-escuro"}`}>
           {sobra === 0 && `${ordenada.length} jogadores → ${cfg.times} times de ${cfg.porTime}. Fecha certinho.`}
           {sobra > 0 && `${sobra} a mais: ${sobra === 1 ? "o último fica" : `os últimos ${sobra} ficam`} na espera.`}
-          {sobra < 0 && !cfg.completarReserva && `Faltam ${-sobra} pra ${cfg.times} times de ${cfg.porTime}.`}
+          {sobra < 0 && !cfgUsada.completarReserva && `Faltam ${-sobra} pra ${cfg.times} times de ${cfg.porTime}.`}
           {sobra < 0 &&
-            cfg.completarReserva &&
+            cfgUsada.completarReserva &&
             `Faltam ${-sobra}: ${-sobra === 1 ? "entra 1 RESERVA" : `entram ${-sobra} RESERVA`} com ${notaReserva(elenco, cfg.modo).toFixed(1).replace(".", ",")}★ (a nota mais alta). Nos times, toca no RESERVA pra trocar por quem chegar.`}
         </p>
         <div className="flex gap-2">
@@ -451,7 +456,10 @@ export default function SortearPage() {
           <span className="text-xs font-bold uppercase tracking-wider text-apagado">Regras · padrão da {pelada.nome}</span>
           <span className="text-xs text-apagado">salvas</span>
         </div>
-        {(["junto", "separar"] as const).map((tipo) => (
+        {!avancado && (
+          <span className="rounded-xl bg-fundo px-3 py-2 text-[13px] text-apagado">Jogar junto, separar, RESERVA e não repetir os times fazem parte do plano Completo.</span>
+        )}
+        {avancado && (["junto", "separar"] as const).map((tipo) => (
           <div key={tipo} className="flex flex-col gap-1.5">
             <div className="flex items-center justify-between">
               <span className="font-semibold">{tipo === "junto" ? "Jogar junto" : "Separar"}</span>
@@ -482,6 +490,8 @@ export default function SortearPage() {
           <span className="font-semibold">Goleiro fixo em cada time</span>
           <Interruptor rotulo="Goleiro fixo" ligado={cfg.goleiroFixo} aoMudar={(v) => mudarCfg({ goleiroFixo: v })} />
         </div>
+        {avancado && (
+        <>
         <div className="flex items-center justify-between gap-3">
           <span className="flex flex-col">
             <span className="font-semibold">Vaga vazia vira RESERVA</span>
@@ -496,6 +506,8 @@ export default function SortearPage() {
           </span>
           <Interruptor rotulo="Não repetir os times" ligado={cfg.naoRepetir} aoMudar={(v) => mudarCfg({ naoRepetir: v })} />
         </div>
+        </>
+        )}
       </section>
 
       {erro && <p role="alert" className="rounded-xl bg-alerta-suave px-3 py-2 text-sm text-alerta-escuro">{erro}</p>}

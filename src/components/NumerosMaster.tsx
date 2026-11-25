@@ -5,6 +5,9 @@ import { criarClienteSupabase } from "@/lib/supabase/client";
 import type { Pelada } from "@/lib/pelada";
 import { planoDe } from "@/lib/planos";
 import { curtaDia, isoDia } from "@/lib/datas";
+import { formatarZap, linkZapPara } from "@/lib/whatsapp";
+
+type Criador = { id: string; nome: string; apelido: string | null; email: string | null; whatsapp?: string | null };
 
 type PorPelada = { id: string; ultima: string | null; dias30: number; jogos30: number };
 type Numeros = { contas: number; contasNovas: number; jogos30: number; gols30: number; porPelada: Map<string, PorPelada> };
@@ -13,6 +16,18 @@ const PRECO = 29.9;
 
 export default function NumerosMaster({ peladas }: { peladas: Pelada[] }) {
   const [n, setN] = useState<Numeros | null>(null);
+  const [criadores, setCriadores] = useState<Map<string, Criador>>(new Map());
+
+  // Quem criou as peladas novas (o master lê os perfis): nome, e-mail e WhatsApp pra oferecer o Completo.
+  useEffect(() => {
+    const ids = [...new Set(peladas.map((p) => p.criado_por).filter((x): x is string => !!x))];
+    if (!ids.length) return;
+    criarClienteSupabase()
+      .from("profiles")
+      .select("*")
+      .in("id", ids)
+      .then(({ data }) => setCriadores(new Map(((data ?? []) as Criador[]).map((c) => [c.id, c]))));
+  }, [peladas]);
 
   useEffect(() => {
     if (!peladas.length) return;
@@ -62,7 +77,48 @@ export default function NumerosMaster({ peladas }: { peladas: Pelada[] }) {
     </div>
   );
 
+  // Peladas que a própria galera criou (não foi o master), das mais novas pras mais antigas.
+  const daGalera = reais
+    .filter((p) => p.criado_por && criadores.has(p.criado_por) && !(criadores.get(p.criado_por) as Criador & { is_master?: boolean }).is_master)
+    .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+
   return (
+    <>
+    {daGalera.length > 0 && (
+      <section className="flex flex-col gap-2 rounded-2xl border-2 border-roxo/40 bg-white p-4">
+        <span className="text-xs font-bold tracking-wider text-apagado">PELADAS CRIADAS PELA GALERA</span>
+        {daGalera.map((p) => {
+          const c = criadores.get(p.criado_por as string) as Criador;
+          const teste = planoDe(p) === "completo" && p.plano_ate;
+          return (
+            <div key={p.id} className="flex flex-col gap-1 border-t border-borda pt-2 text-sm first:border-0 first:pt-0">
+              <span className="flex items-center justify-between gap-2">
+                <strong className="truncate">{p.nome}</strong>
+                <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold ${teste ? "bg-alerta-suave text-alerta-escuro" : planoDe(p) === "completo" ? "bg-roxo text-white" : "bg-fundo text-apagado"}`}>
+                  {teste ? `TESTE ATÉ ${curtaDia(p.plano_ate as string)}` : planoDe(p) === "completo" ? "COMPLETO" : "GRÁTIS"}
+                </span>
+              </span>
+              <span className="text-[13px] text-apagado">
+                {c.apelido || c.nome}
+                {c.email ? ` · ${c.email}` : ""}
+                {c.whatsapp ? ` · ${formatarZap(c.whatsapp)}` : ""}
+                {p.created_at ? ` · criada ${curtaDia(p.created_at.slice(0, 10))}` : ""}
+              </span>
+              {c.whatsapp && (
+                <a
+                  href={linkZapPara(c.whatsapp, `Fala, ${c.apelido || c.nome.split(" ")[0]}! Aqui é o Matheus, do MA Sorteio de Times. Vi que você criou a ${p.nome} no app. Tá curtindo? Se quiser, te mostro o plano Completo (lista no app, Pix, camisa da pelada, telão…).`)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="self-start rounded-full bg-zap px-3 py-1 text-xs font-bold text-white"
+                >
+                  Chamar no Zap
+                </a>
+              )}
+            </div>
+          );
+        })}
+      </section>
+    )}
     <section className="flex flex-col gap-3 rounded-2xl bg-noite p-4 text-white">
       <span className="text-xs font-bold tracking-wider text-roxo-claro">NÚMEROS DO APP</span>
       <div className="grid grid-cols-3 gap-2">
@@ -96,5 +152,6 @@ export default function NumerosMaster({ peladas }: { peladas: Pelada[] }) {
         })}
       </div>
     </section>
+    </>
   );
 }

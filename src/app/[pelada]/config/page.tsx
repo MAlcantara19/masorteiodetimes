@@ -3,6 +3,7 @@
 import ConfigLista from "@/components/ConfigLista";
 import ConfigAvisos from "@/components/ConfigAvisos";
 import { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { useSessao } from "@/lib/sessao";
 import { usePelada } from "@/lib/pelada";
@@ -13,6 +14,7 @@ import type { Pelada } from "@/lib/pelada";
 import Camisa, { ESTILOS_CAMISA, resolverCamisa, siglaDe, type EstiloCamisa, type OpcoesCamisa } from "@/components/Camisa";
 import Bloqueado from "@/components/Bloqueado";
 import { Escolha, Interruptor } from "@/components/Folha";
+import { comprimirImagem } from "@/lib/comprimir";
 import { PALETA } from "@/lib/cores";
 import { temRecurso } from "@/lib/planos";
 
@@ -58,8 +60,9 @@ function ConfigCores({ pelada, nomeAdmin, numeroAdmin, aoSalvar }: { pelada: Pel
     setEnviandoFoto(true);
     const sb = criarClienteSupabase();
     const { data: u } = await sb.auth.getUser();
-    const caminho = `${u.user?.id ?? "x"}/camisa-${pelada.slug}-${Date.now()}.${arq.name.split(".").pop() || "png"}`;
-    const up = await sb.storage.from("imagens").upload(caminho, arq, { contentType: arq.type });
+    const { blob, ext, tipo } = await comprimirImagem(arq, { lado: 800, transparente: true });
+    const caminho = `${u.user?.id ?? "x"}/camisa-${pelada.slug}-${Date.now()}.${ext}`;
+    const up = await sb.storage.from("imagens").upload(caminho, blob, { contentType: tipo });
     setEnviandoFoto(false);
     if (up.error) return setErro("Não deu pra enviar a foto.");
     mudar({ foto: sb.storage.from("imagens").getPublicUrl(caminho).data.publicUrl });
@@ -241,12 +244,27 @@ function ConfigPix({ pelada, aoSalvar }: { pelada: Pelada; aoSalvar: () => void 
   );
 }
 
+const ABAS = [
+  { id: "pelada", rotulo: "Pelada" },
+  { id: "camisa", rotulo: "Camisa e cores" },
+  { id: "lista", rotulo: "Lista" },
+  { id: "dinheiro", rotulo: "Pix e valores" },
+  { id: "avisos", rotulo: "Avisos" },
+] as const;
+
 export default function ConfigPage() {
   const { pelada, naoAchou, recarregar } = usePelada();
   const { carregando, usuario, perfil, ehAdmin, ehMaster, recarregar: recarregarSessao } = useSessao();
   const admin = pelada ? ehAdmin(pelada.id) : false;
   const [pin, setPin] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const busca = useSearchParams();
+  const router = useRouter();
+  const aba = (ABAS.find((x) => x.id === busca.get("aba"))?.id ?? "pelada") as (typeof ABAS)[number]["id"];
+  function trocarAba(id: string) {
+    setAviso(null);
+    router.replace(`?aba=${id}`, { scroll: false });
+  }
 
   const carregarPin = useCallback(async () => {
     if (!pelada || !admin) return;
@@ -273,76 +291,117 @@ export default function ConfigPage() {
   async function enviarLogo(arq: File) {
     if (!pelada || !usuario) return;
     const sb = criarClienteSupabase();
-    const caminho = `${usuario.id}/logo-${pelada.slug}-${Date.now()}.${arq.name.split(".").pop() || "png"}`;
-    const up = await sb.storage.from("imagens").upload(caminho, arq, { contentType: arq.type });
+    const { blob, ext, tipo } = await comprimirImagem(arq, { lado: 512, transparente: true });
+    const caminho = `${usuario.id}/logo-${pelada.slug}-${Date.now()}.${ext}`;
+    const up = await sb.storage.from("imagens").upload(caminho, blob, { contentType: tipo });
     if (up.error) return setAviso("Não deu pra enviar a logo.");
     const url = sb.storage.from("imagens").getPublicUrl(caminho).data.publicUrl;
     await sb.from("peladas").update({ logo_url: url }).eq("id", pelada.id);
     recarregar();
   }
 
+  async function mudarModoDia(v: boolean) {
+    if (!pelada) return;
+    const { error } = await criarClienteSupabase().from("peladas").update({ modo_dia_jogo: v }).eq("id", pelada.id);
+    if (error) return setAviso("O modo dia de jogo precisa do SQL 0010 no Supabase.");
+    recarregar();
+    recarregarSessao();
+  }
+
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-6">
       <Topo titulo="Configurar pelada" sub={pelada.nome} voltar="/mais" />
 
-      <section className="flex flex-col gap-2 rounded-2xl bg-noite p-4 text-white">
-        <span className="text-sm text-[#CFC7E0]">PIN do ao vivo (pra quem vai marcar o placar sem ter conta; quem é da pelada e está logado já mexe)</span>
-        <div className="flex items-center justify-between">
-          <span className="font-display text-4xl font-bold tracking-[0.3em] text-roxo-claro">{pin ?? "····"}</span>
-          <button type="button" onClick={novoPin} className="h-10 rounded-xl bg-white/15 px-3 text-sm font-semibold">
-            Gerar outro
+      {/* Abas: cada assunto numa tela */}
+      <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 pb-1">
+        {ABAS.map((x) => (
+          <button
+            key={x.id}
+            type="button"
+            onClick={() => trocarAba(x.id)}
+            aria-pressed={aba === x.id}
+            className={`h-9 shrink-0 rounded-full px-3.5 text-sm font-semibold ${aba === x.id ? "bg-roxo text-white" : "border border-borda bg-white"}`}
+          >
+            {x.rotulo}
           </button>
-        </div>
-      </section>
+        ))}
+      </div>
 
-      <ConfigLista key={`lista-${pelada.id}`} pelada={pelada} aoSalvar={() => { recarregar(); recarregarSessao(); setAviso("Lista salva!"); }} />
-
-      <ConfigAvisos key={`avisos-${pelada.id}`} pelada={pelada} aoSalvar={() => { recarregar(); setAviso("Lembretes e divulgação salvos!"); }} />
-
-      <ConfigPix pelada={pelada} aoSalvar={() => { recarregar(); setAviso("Pix salvo!"); }} />
-
-      <section className="flex items-center gap-4 rounded-2xl border border-borda bg-white p-4">
-        <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-roxo-suave text-xs text-roxo-escuro">
-          {pelada.logo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={pelada.logo_url} alt="Logo da pelada" className="h-full w-full object-contain" />
-          ) : (
-            "sem logo"
-          )}
-        </div>
-        <label className="cursor-pointer rounded-xl border border-borda px-3 py-2 text-sm font-semibold text-roxo">
-          {pelada.logo_url ? "Trocar logo" : "Enviar logo"}
-          <input type="file" accept="image/*" className="sr-only" onChange={(e) => e.target.files?.[0] && enviarLogo(e.target.files[0])} />
-        </label>
-      </section>
-      {temRecurso(pelada, "cores", ehMaster) ? (
-        <ConfigCores
-          key={pelada.id}
-          pelada={pelada}
-          nomeAdmin={perfil?.apelido || perfil?.nome?.split(" ")[0] || "Craque"}
-          numeroAdmin={perfil?.numero_camisa ?? 10}
-          aoSalvar={() => {
-            recarregar();
-            recarregarSessao();
-            setAviso("Cores salvas! O app já está com a cara da pelada.");
-          }}
-        />
-      ) : (
-        <Bloqueado titulo="Cores e camisa da pelada" pelada={pelada.nome} admin />
-      )}
       {aviso && <p className="rounded-xl bg-roxo-suave px-3 py-2 text-sm text-roxo-escuro">{aviso}</p>}
 
-      <section className="rounded-2xl border border-borda bg-white p-4">
-        <FormPelada
-          key={pelada.id + pelada.nome}
-          pelada={pelada}
-          aoSalvar={() => {
-            recarregar();
-            recarregarSessao();
-            setAviso("Salvo!");
-          }}
-        />
-      </section>
+      {aba === "pelada" && (
+        <>
+          <section className="rounded-2xl border border-borda bg-white p-4">
+            <FormPelada
+              key={pelada.id + pelada.nome}
+              pelada={pelada}
+              aoSalvar={() => {
+                recarregar();
+                recarregarSessao();
+                setAviso("Salvo!");
+              }}
+            />
+          </section>
+          <section className="flex items-center gap-4 rounded-2xl border border-borda bg-white p-4">
+            <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-roxo-suave text-xs text-roxo-escuro">
+              {pelada.logo_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={pelada.logo_url} alt="Logo da pelada" className="h-full w-full object-contain" />
+              ) : (
+                "sem logo"
+              )}
+            </div>
+            <label className="cursor-pointer rounded-xl border border-borda px-3 py-2 text-sm font-semibold text-roxo">
+              {pelada.logo_url ? "Trocar logo" : "Enviar logo"}
+              <input type="file" accept="image/*" className="sr-only" onChange={(e) => e.target.files?.[0] && enviarLogo(e.target.files[0])} />
+            </label>
+          </section>
+          <section className="flex items-center justify-between gap-3 rounded-2xl border border-borda bg-white p-4">
+            <span className="flex flex-col">
+              <span className="font-semibold">Modo dia de jogo</span>
+              <span className="text-[13px] text-apagado">No dia da pelada, o Início do sorteador oficial (🎲 em Jogadores) vira o passo a passo: lista, sorteio, times, partida e fim.</span>
+            </span>
+            <Interruptor rotulo="Modo dia de jogo" ligado={!!pelada.modo_dia_jogo} aoMudar={mudarModoDia} />
+          </section>
+          <section className="flex flex-col gap-2 rounded-2xl bg-noite p-4 text-white">
+            <span className="text-sm text-[#CFC7E0]">PIN do ao vivo (pra quem vai marcar o placar sem ter conta; quem é da pelada e está logado já mexe)</span>
+            <div className="flex items-center justify-between">
+              <span className="font-display text-4xl font-bold tracking-[0.3em] text-roxo-claro">{pin ?? "····"}</span>
+              <button type="button" onClick={novoPin} className="h-10 rounded-xl bg-white/15 px-3 text-sm font-semibold">
+                Gerar outro
+              </button>
+            </div>
+          </section>
+        </>
+      )}
+
+      {aba === "camisa" &&
+        (temRecurso(pelada, "cores", ehMaster) ? (
+          <ConfigCores
+            key={pelada.id}
+            pelada={pelada}
+            nomeAdmin={perfil?.apelido || perfil?.nome?.split(" ")[0] || "Craque"}
+            numeroAdmin={perfil?.numero_camisa ?? 10}
+            aoSalvar={() => {
+              recarregar();
+              recarregarSessao();
+              setAviso("Cores salvas! O app já está com a cara da pelada.");
+            }}
+          />
+        ) : (
+          <Bloqueado titulo="Cores e camisa da pelada" pelada={pelada.nome} admin />
+        ))}
+
+      {aba === "lista" &&
+        (temRecurso(pelada, "lista_app", ehMaster) ? (
+          <ConfigLista key={`lista-${pelada.id}`} pelada={pelada} aoSalvar={() => { recarregar(); recarregarSessao(); setAviso("Lista salva!"); }} />
+        ) : (
+          <Bloqueado titulo="Lista da semana no app" pelada={pelada.nome} admin />
+        ))}
+
+      {aba === "dinheiro" && <ConfigPix pelada={pelada} aoSalvar={() => { recarregar(); setAviso("Pix salvo!"); }} />}
+
+      {aba === "avisos" && <ConfigAvisos key={`avisos-${pelada.id}`} pelada={pelada} aoSalvar={() => { recarregar(); setAviso("Lembretes e divulgação salvos!"); }} />}
     </main>
   );
 }

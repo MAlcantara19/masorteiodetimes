@@ -12,6 +12,8 @@ export type Recurso =
   | "cores"
   | "caixa"
   | "telao"
+  | "sorteio_avancado"
+  | "lista_app"
   | "confrontos_admin"
   | "duplas_admin";
 
@@ -24,6 +26,8 @@ export const RECURSOS: { id: Recurso; titulo: string; sub: string }[] = [
   { id: "cores", titulo: "Cores e camisa da pelada", sub: "o app com a cara da pelada" },
   { id: "caixa", titulo: "Caixa da pelada", sub: "entradas, saídas e saldo" },
   { id: "telao", titulo: "Telão pra TV", sub: "placar gigante na TV da quadra" },
+  { id: "sorteio_avancado", titulo: "Sorteio com regras", sub: "jogar junto, separar, RESERVA e não repetir times" },
+  { id: "lista_app", titulo: "Lista da semana no app", sub: "mensalistas, vou/não vou e espera" },
   { id: "confrontos_admin", titulo: "Confrontos pro admin", sub: "duplas que vencem, rivalidades" },
   { id: "duplas_admin", titulo: "Duplas que caem juntas pro admin", sub: "pra conferir o sorteio" },
 ];
@@ -38,8 +42,8 @@ export const PLANOS: Record<Plano, { nome: string; preco: string; recursos: Recu
   completo: {
     nome: "Completo",
     preco: "R$ 29,90/mês",
-    recursos: ["pix", "retrospectiva", "banners", "fotos", "album", "cores", "caixa", "telao"],
-    resumo: ["Tudo do grátis", "Pix da mensalidade", "Cores, logo e camisa", "Banners, fotos, álbum e retrospectiva", "Caixa da pelada e telão pra TV", "Cartas especiais"],
+    recursos: ["pix", "retrospectiva", "banners", "fotos", "album", "cores", "caixa", "telao", "sorteio_avancado", "lista_app"],
+    resumo: ["Tudo do grátis", "Sorteio com regras (junto, separar, RESERVA)", "Lista da semana no app", "Pix da mensalidade", "Cores, logo e camisa", "Banners, fotos, álbum e retrospectiva", "Caixa da pelada e telão pra TV", "Cartas especiais"],
   },
 };
 

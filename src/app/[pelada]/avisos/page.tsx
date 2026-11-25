@@ -103,7 +103,7 @@ export default function AvisosPage() {
               </div>
               {a.texto && <p className="text-sm whitespace-pre-wrap text-apagado">{a.texto}</p>}
               <div className="flex items-center justify-between">
-                {a.link ? (
+                {a.link && a.link.startsWith("/") && !a.link.startsWith("//") ? (
                   <Link href={a.link} className="text-sm font-semibold text-roxo">
                     Abrir →
                   </Link>

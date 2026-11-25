@@ -63,14 +63,31 @@ self.addEventListener("push", (e) => {
       icon: "/icons/192.png",
       badge: "/icons/192.png",
       tag: dados.tag,
-      data: { url: dados.url },
+      actions: Array.isArray(dados.acoes) ? dados.acoes.slice(0, 2) : [],
+      data: { url: dados.url, evento: dados.evento },
     }),
   );
 });
 
 self.addEventListener("notificationclick", (e) => {
   e.notification.close();
-  const url = (e.notification.data && e.notification.data.url) || "/";
+  const dados = e.notification.data || {};
+  // "✋ Vou" / "Não vou": responde sem abrir o app e mostra a confirmação.
+  if ((e.action === "vou" || e.action === "naovou") && dados.evento) {
+    e.waitUntil(
+      fetch("/api/lista/responder", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ evento_id: dados.evento, resposta: e.action }),
+      })
+        .then((r) => r.json())
+        .catch(() => ({ titulo: "Não deu certo", corpo: "Abre o app pra responder." }))
+        .then((j) => self.registration.showNotification(j.titulo || "MA Sorteio", { body: j.corpo || "", icon: "/icons/192.png", badge: "/icons/192.png", data: { url: dados.url } })),
+    );
+    return;
+  }
+  const url = dados.url || "/";
   e.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((janelas) => {
       for (const j of janelas) {

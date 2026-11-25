@@ -32,6 +32,7 @@ export type Pelada = {
   lista_goleiros?: number;
   lista_abre_dia?: number | null;
   lista_abre_hora?: string | null;
+  modo_dia_jogo?: boolean; // (SQL 0010)
   publica?: boolean; // (SQL 0009) aparece em "Achar pelada"
   contato_whatsapp?: string | null;
   aviso_dia?: boolean;
@@ -44,6 +45,8 @@ export type Pelada = {
   recursos?: Record<string, boolean> | null;
   plano_ate?: string | null;
   demo?: boolean;
+  criado_por?: string | null;
+  created_at?: string;
 };
 
 export type Atributos = {
@@ -73,6 +76,7 @@ export type Membro = {
   ativo: boolean;
   nascimento?: string | null; // "AAAA-MM-DD" (SQL 0003)
   mensalista?: boolean; // (SQL 0007) entra direto na lista toda semana
+  sorteador?: boolean; // (SQL 0010) sorteador oficial (modo dia de jogo)
   nota?: Nota | null; // só vem pra admin (RLS)
 };
 
@@ -110,7 +114,7 @@ export function nomeCurto(m: { nome: string; apelido?: string | null }): string 
   return m.apelido?.trim() || m.nome;
 }
 
-export const SLUGS_RESERVADOS = ["mais", "peladas", "entrar", "perfil", "master", "p", "auth", "api", "acompanhar", "sortear", "privacidade", "telao", "compartilhar", "cronometro", "tour", "marca", "icons"];
+export const SLUGS_RESERVADOS = ["mais", "peladas", "ir", "criar", "entrar", "perfil", "master", "p", "auth", "api", "acompanhar", "sortear", "privacidade", "telao", "compartilhar", "cronometro", "tour", "marca", "icons"];
 
 export function criarSlug(nome: string): string {
   return nome
@@ -153,7 +157,9 @@ export async function carregarElenco(peladaId: string, comNotas: boolean): Promi
   const sb = criarClienteSupabase();
   const base = "id, pelada_id, profile_id, nome, apelido, papel, posicao, sabe_marcar, goleiro, convidado, ativo";
   const notas = comNotas ? ", nota:notas(nota_simples, atributos, usar_completa)" : "";
-  let { data, error } = await sb.from("membros").select(`${base}, apelidos, nascimento, mensalista${notas}`).eq("pelada_id", peladaId).order("nome");
+  let { data, error } = await sb.from("membros").select(`${base}, apelidos, nascimento, mensalista, sorteador${notas}`).eq("pelada_id", peladaId).order("nome");
+  // Sem o SQL 0010 (sorteador), tenta sem essa coluna.
+  if (error) ({ data, error } = await sb.from("membros").select(`${base}, apelidos, nascimento, mensalista${notas}`).eq("pelada_id", peladaId).order("nome"));
   // Sem o SQL 0007 (mensalista), tenta sem essa coluna.
   if (error) ({ data, error } = await sb.from("membros").select(`${base}, apelidos, nascimento${notas}`).eq("pelada_id", peladaId).order("nome"));
   // Sem o SQL 0003 (nascimento), tenta só com os apelidos (SQL 0002).

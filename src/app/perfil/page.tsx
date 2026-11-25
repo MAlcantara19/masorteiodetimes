@@ -11,12 +11,15 @@ import { Escolha } from "@/components/Folha";
 import { formatarZap, mascaraZap, normalizarZap } from "@/lib/whatsapp";
 import { lerTema, salvarTema, type Tema } from "@/lib/tema";
 import AtivarNotificacoes from "@/components/AtivarNotificacoes";
+import { comprimirImagem } from "@/lib/comprimir";
+import Link from "next/link";
+import Camisa from "@/components/Camisa";
 
 const NIVEIS = ["Tô começando", "Quebro o galho", "Jogo direitinho", "Jogo bem", "Sou craque"];
 
 export default function PerfilPage() {
   const router = useRouter();
-  const { carregando, usuario, perfil, recarregar, sair } = useSessao();
+  const { carregando, usuario, perfil, recarregar, sair, vinculos } = useSessao();
   const [nome, setNome] = useState("");
   const [apelido, setApelido] = useState("");
   const [foto, setFoto] = useState<string | null>(null);
@@ -54,9 +57,10 @@ export default function PerfilPage() {
     if (!usuario) return;
     setErro(null);
     const sb = criarClienteSupabase();
-    const ext = arquivo.name.split(".").pop()?.toLowerCase() || "jpg";
+    // Foto mais leve: 600 px já sobra pra card e lista.
+    const { blob, ext, tipo } = await comprimirImagem(arquivo, { lado: 600 });
     const caminho = `${usuario.id}/foto-${Date.now()}.${ext}`;
-    const { error } = await sb.storage.from("imagens").upload(caminho, arquivo, { upsert: true, contentType: arquivo.type });
+    const { error } = await sb.storage.from("imagens").upload(caminho, blob, { upsert: true, contentType: tipo });
     if (error) {
       setErro("Não deu pra enviar a foto.");
       return;
@@ -231,6 +235,34 @@ export default function PerfilPage() {
           {salvando ? "Salvando…" : primeiro ? "Começar" : "Salvar"}
         </button>
       </form>
+
+      {!primeiro && vinculos.length > 0 && (
+        <section className="flex flex-col gap-2 rounded-2xl border border-borda bg-white p-4">
+          <span className="font-semibold">Minhas peladas</span>
+          {vinculos.map((v) => (
+            <div key={v.membro_id} className="flex items-center gap-3 border-t border-borda pt-2 first:border-0 first:pt-0">
+              <Camisa
+                cor={v.pelada.cor_banner || "#7444D6"}
+                cor2={v.pelada.cor_secundaria || "#FFFFFF"}
+                estilo={v.pelada.camisa_estilo}
+                opcoes={v.pelada.camisa}
+                costas={{ nome: apelido || nome.split(" ")[0] || "Você", numero: numero || 10 }}
+                largura={56}
+              />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="truncate font-semibold">{v.pelada.nome}</span>
+                <span className="text-xs text-apagado">{v.papel === "admin" ? "admin" : "jogador"}</span>
+              </span>
+              <Link href={`/${v.pelada.slug}/jogador/${v.membro_id}`} className="shrink-0 rounded-full border border-borda px-3 py-1.5 text-xs font-semibold">
+                Meus números
+              </Link>
+            </div>
+          ))}
+          <Link href="/perfil/card" className="text-center text-sm font-semibold text-roxo">
+            Ver meu card →
+          </Link>
+        </section>
+      )}
 
       <AtivarNotificacoes />
 

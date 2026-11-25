@@ -16,6 +16,10 @@ import { aberturaDaLista, erroLista, lancarLista, montarVagas, proximoDiaDaPelad
 import { montarTextoLista } from "@/lib/lista";
 import { linkZap } from "@/lib/resumo-zap";
 import { ehReserva } from "@/lib/montar-sorteio";
+import { avisarPush } from "@/lib/push-cliente";
+import { useContatos } from "@/lib/contatos";
+import { linkZapPara } from "@/lib/whatsapp";
+import { useSearchParams } from "next/navigation";
 import Capa from "@/components/Capa";
 import { Carregando } from "@/components/Topo";
 
@@ -47,6 +51,10 @@ export default function ListaAppPage() {
   const [noGol, setNoGol] = useState(false);
   const [busca, setBusca] = useState("");
   const [souBusca, setSouBusca] = useState("");
+  // Quem subiu da espera (vem da notificação do admin: ?avisar=<membro>) pra mandar no Zap.
+  const busca2 = useSearchParams();
+  const [subiu, setSubiu] = useState<string | null>(busca2.get("avisar"));
+  const contatos = useContatos(pelada?.id, admin);
 
   const carregarPres = useCallback(async (id: string) => {
     const { data } = await criarClienteSupabase().from("presencas").select("*").eq("evento_id", id).order("ordem");
@@ -139,7 +147,21 @@ export default function ListaAppPage() {
     elencoRapido(pelada.id, setElenco);
   }
 
-  const sair = (membroId?: string) => evento && rpc(() => sb.rpc("lista_sair", { p_evento: evento.id, p_membro: membroId ?? null }), "Nome tirado da lista.");
+  async function sair(membroId?: string) {
+    if (!evento) return;
+    setOcupado(true);
+    setAviso(null);
+    const { data, error } = await sb.rpc("lista_sair", { p_evento: evento.id, p_membro: membroId ?? null });
+    setOcupado(false);
+    if (error) return setAviso({ ok: false, txt: erroLista(error.message) });
+    setAviso({ ok: true, txt: "Nome tirado da lista." });
+    // Alguém subiu da espera: avisa a pessoa (e os admins) por notificação.
+    if (typeof data === "string") {
+      fetch("/api/lista/vaga", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ evento_id: evento.id, membro_id: data }) }).catch(() => {});
+      if (admin) setSubiu(data);
+    }
+    carregarPres(evento.id);
+  }
 
   // ---------- Admin ----------
   async function lancar() {
@@ -152,7 +174,8 @@ export default function ListaAppPage() {
     const r = await lancarLista(criarClienteSupabase(), pelada, data, abre && abre.getTime() > Date.now() ? abre : null);
     setOcupado(false);
     if (!r) return setAviso({ ok: false, txt: "Não deu pra lançar a lista." });
-    setAviso({ ok: true, txt: r.nova ? "Lista lançada com os mensalistas." : "A lista desse dia já existia." });
+    setAviso({ ok: true, txt: r.nova ? "Lista lançada com os mensalistas. Avisei a galera." : "A lista desse dia já existia." });
+    if (r.nova && pelada && (!abre || abre.getTime() <= Date.now())) avisarPush({ pelada_id: pelada.id, tipo: "lista", evento_id: r.id });
     carregar();
   }
   async function abrirAgora() {
@@ -266,6 +289,30 @@ export default function ListaAppPage() {
               Abrir agora
             </button>
           )}
+        </section>
+      )}
+
+      {admin && subiu && (
+        <section className="flex items-center gap-2 rounded-2xl border-2 border-zap/40 bg-white p-3 text-sm">
+          <span className="flex-1">
+            🔁 <strong>{nome(porId.get(subiu))}</strong> saiu da espera e entrou na lista.
+          </span>
+          <a
+            href={
+              contatos.get(subiu)?.whatsapp
+                ? linkZapPara(contatos.get(subiu)!.whatsapp as string, `Fala, ${nome(porId.get(subiu))}! ⚽ Abriu vaga na ${pelada.nome} e você saiu da espera: tá na lista! Confirma aí.`)
+                : `https://wa.me/?text=${encodeURIComponent(`Fala, ${nome(porId.get(subiu))}! ⚽ Abriu vaga na ${pelada.nome} e você saiu da espera: tá na lista! Confirma aí.`)}`
+            }
+            target="_blank"
+            rel="noreferrer"
+            onClick={() => setSubiu(null)}
+            className="shrink-0 rounded-full bg-zap px-3 py-1.5 text-xs font-bold text-white"
+          >
+            Avisar no Zap
+          </a>
+          <button type="button" aria-label="Fechar" onClick={() => setSubiu(null)} className="text-apagado">
+            ×
+          </button>
         </section>
       )}
 

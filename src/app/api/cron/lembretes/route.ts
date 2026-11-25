@@ -7,7 +7,7 @@
 //   na hora de abrir, avisa "a lista abriu". A lista abre na hora certa mesmo se o aviso atrasar.
 import { NextResponse, type NextRequest } from "next/server";
 import { clienteAdmin } from "@/lib/supabase/server";
-import { enviarPara, perfisDaPelada } from "@/lib/push-servidor";
+import { ACOES_LISTA, enviarPara, perfisDaPelada } from "@/lib/push-servidor";
 import { aberturaDaLista, lancarLista, proximoDiaDaPelada } from "@/lib/lista-app";
 
 // Hora de Brasília (o servidor roda em UTC).
@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     const duasHoras = p.aviso_2h && sp.hora === h - 2;
     if (!manha && !duasHoras) continue;
     // Quem está na lista de hoje (se tiver lista); senão todo mundo.
-    const { data: ev } = await admin.from("eventos").select("id").eq("pelada_id", p.id).eq("data", sp.data).neq("status", "cancelado").maybeSingle();
+    const { data: ev } = await admin.from("eventos").select("id, status").eq("pelada_id", p.id).eq("data", sp.data).neq("status", "cancelado").maybeSingle();
     let membros: string[] | undefined;
     if (ev) {
       const { data: pr } = await admin.from("presencas").select("membro_id").eq("evento_id", ev.id).eq("status", "confirmado");
@@ -65,7 +65,9 @@ export async function GET(request: NextRequest) {
     const ids = await perfisDaPelada(p.id, membros ? { membros } : {});
     const titulo = manha ? `⚽ Hoje tem ${p.nome}!` : `⏰ ${p.nome} daqui a 2 horas`;
     const texto = manha ? `Às ${hhmm}${p.local ? ` · ${p.local}` : ""}. Bora!` : `Começa às ${hhmm}${p.local ? ` · ${p.local}` : ""}. Separa a chuteira!`;
-    const n = await enviarPara(ids, { titulo, corpo: texto, url: `/p/${p.slug}/ao-vivo`, tag: `lembrete-${p.id}` }, origem);
+    // Com a lista ainda aberta, a notificação já vem com "✋ Vou / Não vou".
+    const comBotoes = ev && ev.status === "lista" ? { acoes: ACOES_LISTA, evento: ev.id as string } : {};
+    const n = await enviarPara(ids, { titulo, corpo: texto, url: ev && ev.status === "lista" ? `/p/${p.slug}/lista` : `/p/${p.slug}/ao-vivo`, tag: `lembrete-${p.id}`, ...comBotoes }, origem);
     await registrar(p.id, titulo, texto, `/p/${p.slug}/ao-vivo`);
     log.push(`${p.nome}: ${manha ? "hoje tem" : "2h antes"} (${n})`);
   }
@@ -87,7 +89,7 @@ export async function GET(request: NextRequest) {
     if (faltaMin <= 0 && faltaMin > -60) {
       const r = await lancarLista(admin, p, data, abre);
       const ids = await perfisDaPelada(p.id);
-      const n = await enviarPara(ids, { titulo: `✅ A lista da ${p.nome} abriu!`, corpo: "Corre pra pôr seu nome.", url: `/p/${p.slug}/lista`, tag: `listaapp-${p.id}` }, origem);
+      const n = await enviarPara(ids, { titulo: `✅ A lista da ${p.nome} abriu!`, corpo: "Corre pra pôr seu nome.", url: `/p/${p.slug}/lista`, tag: `listaapp-${p.id}`, ...(r ? { acoes: ACOES_LISTA, evento: r.id } : {}) }, origem);
       await registrar(p.id, "✅ A lista abriu!", "Corre pra pôr seu nome.", `/p/${p.slug}/lista`);
       log.push(`${p.nome}: lista abriu (${n})${r?.nova ? " · lançada agora" : ""}`);
     }

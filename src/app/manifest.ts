@@ -14,6 +14,13 @@ export default function manifest(): MetadataRoute.Manifest {
     theme_color: "#1B1430",
     lang: "pt-BR",
     // No Android, com o app instalado: Zap → segurar a lista → Compartilhar → MA Sorteio.
+    // Segurar o ícone do app no celular: atalhos direto pra pelada que a pessoa abriu por último.
+    shortcuts: [
+      { name: "Partida ao vivo", short_name: "Partida", url: "/ir/jogo", icons: [{ src: "/icons/192.png", sizes: "192x192" }] },
+      { name: "Lista da semana", short_name: "Lista", url: "/ir/lista", icons: [{ src: "/icons/192.png", sizes: "192x192" }] },
+      { name: "Montar sorteio", short_name: "Sorteio", url: "/ir/sortear", icons: [{ src: "/icons/192.png", sizes: "192x192" }] },
+      { name: "Cronômetro", short_name: "Cronômetro", url: "/cronometro", icons: [{ src: "/icons/192.png", sizes: "192x192" }] },
+    ],
     share_target: { action: "/compartilhar", method: "GET", params: { title: "title", text: "text", url: "url" } },
     icons: [
       { src: "/icons/192.png", sizes: "192x192", type: "image/png" },

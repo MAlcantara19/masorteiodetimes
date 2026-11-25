@@ -1,5 +1,6 @@
 "use client";
-// Início: as peladas da pessoa, atalho de colar a lista (admin) e o resumo da última pelada.
+// Início: o dia de jogo (ou a próxima pelada), as peladas da pessoa, atalho de colar a lista (admin)
+// e o resumo da última pelada.
 // Sem login, mostra a entrada e o sorteio rápido no aparelho.
 import Link from "next/link";
 import { useSessao } from "@/lib/sessao";
@@ -9,6 +10,7 @@ import { Carregando } from "@/components/Topo";
 import CartaoPelada from "@/components/CartaoPelada";
 import UltimaPelada from "@/components/UltimaPelada";
 import AoVivoAgora from "@/components/AoVivoAgora";
+import HojeNaPelada from "@/components/HojeNaPelada";
 import Capa from "@/components/Capa";
 
 export default function Inicio() {
@@ -61,6 +63,9 @@ export default function Inicio() {
           <Link href="/tour" className="flex h-12 items-center justify-center rounded-[14px] border-2 border-roxo bg-white font-semibold text-roxo">
             Conhecer o app (tour rápido)
           </Link>
+          <Link href="/criar" className="flex h-12 items-center justify-center rounded-[14px] border-2 border-roxo bg-white font-semibold text-roxo">
+            Organiza uma pelada? Crie a sua grátis
+          </Link>
           <Link href="/acompanhar" className="flex h-12 items-center justify-center rounded-[14px] border border-borda bg-white font-semibold text-roxo">
             Só acompanhar o ao vivo
           </Link>
@@ -72,7 +77,9 @@ export default function Inicio() {
         </div>
       )}
 
-      {usuario && atual && ehAdmin(atual.id) && (
+      {usuario && atual && <HojeNaPelada key={atual.id} pelada={atual} />}
+
+      {usuario && atual && ehAdmin(atual.id) && !(atual as { modo_dia_jogo?: boolean }).modo_dia_jogo && (
         <Link href={`/${atual.slug}/lista`} className="flex items-center gap-3.5 rounded-[18px] bg-roxo p-[18px] text-white">
           <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15">
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -122,6 +129,9 @@ export default function Inicio() {
           )}
           <Link href="/peladas" className="mt-1 flex h-11 items-center justify-center rounded-xl border-2 border-roxo font-semibold text-roxo">
             Achar uma pelada pra jogar
+          </Link>
+          <Link href="/criar" className="flex h-11 items-center justify-center rounded-xl bg-roxo font-semibold text-white">
+            Criar a minha pelada (grátis)
           </Link>
         </section>
       )}
