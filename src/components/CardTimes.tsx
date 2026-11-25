@@ -12,7 +12,7 @@ function Rosto({ nome, foto, cor, tamanho }: { nome: string; foto?: string | nul
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
-    .map((p) => p[0])
+    .map((p) => Array.from(p)[0])
     .join("")
     .toUpperCase();
   return foto ? (
@@ -58,10 +58,10 @@ const CardTimes = forwardRef<HTMLDivElement, Props>(function CardTimes(
             <div className="flex flex-col py-1">
               {t.jogadores.map((j, pi) => {
                 const sel = selecionado?.[0] === ti && selecionado?.[1] === pi;
-                const classe = `min-h-8 px-2.5 text-left text-sm font-medium leading-tight ${comFotos ? "flex items-center gap-1.5 py-0.5" : ""} ${sel ? (escuro ? "bg-roxo/60" : "bg-roxo-suave") : ""}`;
+                const classe = `min-h-8 text-left font-medium leading-tight ${comFotos ? `flex items-center gap-1 py-0.5 ${colunas === 3 ? "px-1 text-[12.5px] tracking-tight" : "px-2 text-sm"}` : "px-2.5 text-sm"} ${sel ? (escuro ? "bg-roxo/60" : "bg-roxo-suave") : ""}`;
                 const conteudo = (
                   <>
-                    {comFotos && <Rosto nome={j.nome} foto={j.foto} cor={CORES_TIMES[ti]} tamanho={26} />}
+                    {comFotos && <Rosto nome={j.nome} foto={j.foto} cor={CORES_TIMES[ti]} tamanho={colunas === 3 ? 20 : 26} />}
                     <span className="min-w-0 truncate">{j.nome}</span>
                   </>
                 );
@@ -77,7 +77,8 @@ const CardTimes = forwardRef<HTMLDivElement, Props>(function CardTimes(
               })}
               {t.goleiro && (
                 <span className={`flex items-center gap-1.5 px-2.5 pt-1 pb-0.5 text-[13px] ${escuro ? "text-[#B9AFCB]" : "text-apagado"}`}>
-                  {comFotos ? <Rosto nome={t.goleiro} foto={t.goleiroFoto} cor="#1B1430" tamanho={22} /> : null}🧤 {t.goleiro}
+                  {comFotos ? <Rosto nome={colunas === 3 ? "🧤" : t.goleiro} foto={t.goleiroFoto} cor="#1B1430" tamanho={colunas === 3 ? 20 : 22} /> : null}
+                  <span className="min-w-0 truncate">{comFotos && colunas === 3 ? t.goleiro : `🧤 ${t.goleiro}`}</span>
                 </span>
               )}
             </div>
