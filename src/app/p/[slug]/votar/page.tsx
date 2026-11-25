@@ -9,6 +9,7 @@ import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada"
 import { carregarPresencas, carregarSorteios, type Evento } from "@/lib/evento";
 import { curtaDia, horaDe } from "@/lib/datas";
 import { Carregando } from "@/components/Topo";
+import Capa from "@/components/Capa";
 
 type Votacao = { id: string; categoria: "craque" | "bagre" | "goleiro"; abre: string; fecha: string };
 type Contagem = { categoria: string; votado_id: string; votos: number };
@@ -96,13 +97,7 @@ export default function VotarPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-6">
-      <header className="flex flex-col">
-        <h1 className="font-display text-2xl font-bold">Votação</h1>
-        <span className="text-sm text-apagado">
-          {pelada.nome}
-          {evento ? ` · pelada de ${curtaDia(evento.data)}` : ""}
-        </span>
-      </header>
+      <Capa titulo="Votação" sub={`${pelada.nome}${evento ? ` · pelada de ${curtaDia(evento.data)}` : ""}`} voltar={`/p/${slug}`} logo={pelada.logo_url} />
 
       {!evento && <p className="rounded-2xl border border-borda bg-white p-4 text-sm text-apagado">A votação abre quando o admin encerra a pelada.</p>}
 

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePelada } from "@/lib/pelada";
 import { Carregando } from "@/components/Topo";
 import TelaPartida from "@/components/TelaPartida";
+import Capa from "@/components/Capa";
 
 export default function AoVivoPage() {
   const { pelada, naoAchou } = usePelada();
@@ -24,17 +25,17 @@ export default function AoVivoPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-3 px-4 py-6">
-      <header className="flex items-center justify-between gap-2">
-        <div className="flex flex-col">
-          <h1 className="font-display text-2xl font-bold">
-            {pelada.nome} <span className="text-roxo">ao vivo</span>
-          </h1>
-          <span className="text-[13px] text-apagado">qualquer um com o link pode ver</span>
-        </div>
-        <button type="button" onClick={compartilhar} className="h-10 rounded-full border border-borda bg-white px-3 text-sm font-semibold text-roxo">
-          {copiado ? "Copiado!" : "Compartilhar"}
-        </button>
-      </header>
+      <Capa
+        titulo={`${pelada.nome} ao vivo`}
+        sub="qualquer um com o link pode ver"
+        voltar={`/p/${pelada.slug}`}
+        logo={pelada.logo_url}
+        direita={
+          <button type="button" onClick={compartilhar} className="h-9 shrink-0 rounded-full bg-white/15 px-3 text-sm font-semibold">
+            {copiado ? "Copiado!" : "Compartilhar"}
+          </button>
+        }
+      />
       <TelaPartida pelada={pelada} publico />
       <footer className="pt-4 text-center text-xs text-apagado">
         <Link href="/" className="font-semibold text-roxo">

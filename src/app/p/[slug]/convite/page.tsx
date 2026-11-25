@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSessao } from "@/lib/sessao";
 import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
 import { Carregando } from "@/components/Topo";
+import Capa from "@/components/Capa";
 
 export default function ConvitePage() {
   const router = useRouter();
@@ -44,11 +45,7 @@ export default function ConvitePage() {
 
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-8">
-      <header className="flex flex-col items-center gap-2 text-center">
-        <span className="text-sm text-apagado">Você foi convidado pra</span>
-        <h1 className="font-display text-3xl font-bold">{pelada.nome}</h1>
-        <span className="text-sm text-apagado">no MA Sorteio de Times</span>
-      </header>
+      <Capa titulo={pelada.nome} sub="Você foi convidado pra jogar no MA Sorteio" voltar="/" logo={pelada.logo_url} />
 
       {!usuario && (
         <Link href={`/entrar?volta=${encodeURIComponent(volta)}`} className="flex h-14 items-center justify-center rounded-2xl bg-roxo text-lg font-bold text-white">

@@ -9,6 +9,7 @@ import { carregarSorteios, ultimoEvento, CORES_TIMES, NOMES_TIMES, type Evento, 
 import { curtaDia } from "@/lib/datas";
 import { Escolha } from "@/components/Folha";
 import { Carregando } from "@/components/Topo";
+import Capa from "@/components/Capa";
 
 const MOTIVOS = ["Tinha mais craques", "Goleiro fez diferença", "Mais entrosado", "Time com mais fôlego", "Sorte"];
 
@@ -74,13 +75,7 @@ export default function AvaliarPage() {
 
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-6">
-      <header className="flex flex-col">
-        <h1 className="font-display text-2xl font-bold">Como foi a pelada?</h1>
-        <span className="text-sm text-apagado">
-          {pelada.nome}
-          {evento ? ` · ${curtaDia(evento.data)}` : ""} · leva 1 minutinho
-        </span>
-      </header>
+      <Capa titulo="Como foi a pelada?" sub={`${pelada.nome}${evento ? ` · ${curtaDia(evento.data)}` : ""} · leva 1 minutinho`} voltar={`/p/${pelada.slug}`} logo={pelada.logo_url} />
 
       {!evento && <p className="text-sm text-apagado">Ainda não teve pelada pra avaliar.</p>}
       {enviado && (

@@ -9,6 +9,7 @@ import { calcularEstatisticas, calcularPremios, carregarPeriodo, premioPorDias, 
 import { DIAS, horaCurta, inicioMes, isoDia, nomeMes } from "@/lib/datas";
 import { textoRegra } from "@/lib/partida";
 import { Carregando } from "@/components/Topo";
+import Capa from "@/components/Capa";
 
 export default function PaginaPublica() {
   const { pelada, slug, naoAchou } = usePelada();
@@ -50,24 +51,14 @@ export default function PaginaPublica() {
 
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-6">
-      <header className="flex items-center gap-4 rounded-3xl bg-noite p-5 text-white">
-        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-roxo font-display text-xl font-bold">
-          {pelada.logo_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={pelada.logo_url} alt="" className="h-full w-full object-contain" />
-          ) : (
-            pelada.nome.slice(0, 2).toUpperCase()
-          )}
-        </div>
-        <div className="flex flex-col">
-          <h1 className="font-display text-2xl font-bold">{pelada.nome}</h1>
-          <span className="text-sm text-[#CFC7E0]">
-            {pelada.dia_semana !== null ? `${DIAS[pelada.dia_semana]} · ${horaCurta(pelada.horario)}${pelada.horario_fim ? ` às ${horaCurta(pelada.horario_fim)}` : ""}` : ""}
-            {pelada.local ? ` · ${pelada.local}` : ""}
-          </span>
-          <span className="text-xs text-[#CFC7E0]">Partidas de {textoRegra(pelada)}</span>
-        </div>
-      </header>
+      <Capa
+        titulo={pelada.nome}
+        voltar="/"
+        logo={pelada.logo_url}
+        sub={`${pelada.dia_semana !== null ? `${DIAS[pelada.dia_semana]} · ${horaCurta(pelada.horario)}${pelada.horario_fim ? ` às ${horaCurta(pelada.horario_fim)}` : ""}` : ""}${pelada.local ? ` · ${pelada.local}` : ""}`}
+      >
+        <span className="text-xs text-[#E8DEFF]">Partidas de {textoRegra(pelada)}</span>
+      </Capa>
 
       <Link href={`/p/${slug}/ao-vivo`} className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-alerta text-lg font-bold text-white">
         <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-white" /> Placar ao vivo

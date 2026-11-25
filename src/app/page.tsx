@@ -9,6 +9,7 @@ import { Carregando } from "@/components/Topo";
 import CartaoPelada from "@/components/CartaoPelada";
 import UltimaPelada from "@/components/UltimaPelada";
 import AoVivoAgora from "@/components/AoVivoAgora";
+import Capa from "@/components/Capa";
 
 export default function Inicio() {
   const { carregando, usuario, perfil, peladas, ehMaster, ehAdmin } = useSessao();
@@ -26,24 +27,28 @@ export default function Inicio() {
 
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 py-6">
-      <header className="flex items-center justify-between">
-        <div className="flex flex-col gap-0.5">
-          <span className="text-[13px] text-apagado">{dataExtenso(new Date())}</span>
-          <h1 className="font-display text-[28px] font-bold tracking-tight">
-            MA <span className="text-roxo">Sorteio</span>
-          </h1>
-        </div>
-        {usuario && (
-          <Link href="/perfil" aria-label="Meu perfil" className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full bg-roxo text-[15px] font-bold text-white">
-            {perfil?.foto_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={perfil.foto_url} alt="" className="h-full w-full object-cover" />
-            ) : (
-              iniciais
-            )}
-          </Link>
-        )}
-      </header>
+      <Capa
+        titulo={
+          <>
+            MA <span className="text-roxo-claro">Sorteio</span>
+          </>
+        }
+        sub={dataExtenso(new Date())}
+        direita={
+          usuario ? (
+            <Link href="/perfil" aria-label="Meu perfil" className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 border-white/40 bg-roxo text-[15px] font-bold text-white">
+              {perfil?.foto_url ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={perfil.foto_url} alt="" className="h-full w-full object-cover" />
+              ) : (
+                iniciais
+              )}
+            </Link>
+          ) : undefined
+        }
+      >
+        <span className="text-sm text-[#E8DEFF]">Sorteie, jogue e premie a sua pelada.</span>
+      </Capa>
 
       <AoVivoAgora />
 

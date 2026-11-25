@@ -61,7 +61,11 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
   const [folha, setFolha] = useState<FolhaAberta>(null);
   const [pin, setPin] = useState<{ pin: string; nome: string } | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
-  const [vendo, setVendo] = useState(1);
+  const [vendo, setVendo] = useState<{ nome: string; tipo: "admin" | "membro" | "pin" | "visitante" }[]>([]);
+  const [verQuem, setVerQuem] = useState(false);
+  // Quem eu sou pra lista "quem está vendo" (lido na hora de entrar no canal).
+  const canalRef = useRef<{ track: (x: object) => unknown } | null>(null);
+  const quemSou = useRef<{ nome: string; tipo: "admin" | "membro" | "pin" | "visitante" }>({ nome: "Visitante", tipo: "visitante" });
   const [pendentes, setPendentes] = useState(0);
   const [telao, setTelao] = useState(false);
   const [aba, setAba] = useState<"lances" | "artilharia">("lances");
@@ -132,16 +136,26 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
       .on("postgres_changes", { event: "*", schema: "public", table: "pausas", filter: `partida_id=eq.${partidaAtualId ?? "00000000-0000-0000-0000-000000000000"}` }, recarregar)
       .on("postgres_changes", { event: "*", schema: "public", table: "sorteios", filter: `evento_id=eq.${eventoId}` }, recarregar)
       .on("postgres_changes", { event: "UPDATE", schema: "public", table: "eventos", filter: `id=eq.${eventoId}` }, recarregar)
-      .on("presence", { event: "sync" }, () => setVendo(Math.max(1, Object.keys(canal.presenceState()).length)))
+      .on("presence", { event: "sync" }, () => {
+        const estado = canal.presenceState() as Record<string, { nome?: string; tipo?: string }[]>;
+        setVendo(
+          Object.values(estado).map((lista) => ({
+            nome: lista[0]?.nome || "Visitante",
+            tipo: (lista[0]?.tipo as "admin" | "membro" | "pin" | "visitante") || "visitante",
+          })),
+        );
+      })
       .subscribe((status) => {
-        if (status === "SUBSCRIBED") canal.track({ desde: Date.now() });
+        if (status === "SUBSCRIBED") canal.track({ ...quemSou.current, desde: Date.now() });
       });
+    canalRef.current = canal;
     // Se a tela volta do segundo plano, garante que está em dia.
     const voltou = () => document.visibilityState === "visible" && carregar();
     document.addEventListener("visibilitychange", voltou);
     return () => {
       if (timer) clearTimeout(timer);
       document.removeEventListener("visibilitychange", voltou);
+      canalRef.current = null;
       sb.removeChannel(canal);
     };
   }, [eventoId, partidaAtualId, carregar]);
@@ -163,6 +177,21 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
 
   const porId = useMemo(() => new Map(elenco.map((m) => [m.id, m])), [elenco]);
   const nome = useCallback((id: string | null) => (id ? (porId.get(id) ? nomeCurto(porId.get(id) as Membro) : "?") : "Sem autor"), [porId]);
+
+  useEffect(() => {
+    const nomePerfil = perfil ? perfil.apelido || perfil.nome : null;
+    quemSou.current = admin
+      ? { nome: nomePerfil || "Admin", tipo: "admin" }
+      : membro && nomePerfil
+        ? { nome: nomePerfil, tipo: "membro" }
+        : pin
+          ? { nome: pin.nome, tipo: "pin" }
+          : nomePerfil
+            ? { nome: nomePerfil, tipo: "visitante" }
+            : { nome: "Visitante", tipo: "visitante" };
+    // Já está no canal? Atualiza o nome que os outros veem.
+    canalRef.current?.track({ ...quemSou.current, desde: Date.now() });
+  }, [perfil, admin, membro, pin]);
 
   // ---------- Derivados ----------
   const partida = dados?.partidas[dados.partidas.length - 1] ?? null;
@@ -419,9 +448,9 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
           <span className="flex items-center gap-1.5 rounded-full bg-alerta px-2.5 py-1 text-xs font-bold text-white">
             <span className="h-2 w-2 animate-pulse rounded-full bg-white" /> AO VIVO
           </span>
-          <span className="text-apagado">
-            {vendo} {vendo === 1 ? "pessoa vendo" : "pessoas vendo"}
-          </span>
+          <button type="button" onClick={() => setVerQuem(!verQuem)} className="text-left text-apagado underline decoration-dotted">
+            {Math.max(1, vendo.length)} {Math.max(1, vendo.length) === 1 ? "pessoa vendo" : "pessoas vendo"}
+          </button>
         </span>
         <button
           type="button"
@@ -434,6 +463,23 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
           <Icone nome="tela" tamanho={16} /> Telão
         </button>
       </div>
+
+      {verQuem && vendo.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 rounded-2xl border border-borda bg-white p-3 text-[13px]">
+          <span className="w-full text-xs font-bold tracking-wider text-apagado">VENDO AGORA</span>
+          {[...vendo]
+            .sort((a, b) => ["admin", "membro", "pin", "visitante"].indexOf(a.tipo) - ["admin", "membro", "pin", "visitante"].indexOf(b.tipo))
+            .map((v, i) => (
+              <span
+                key={i}
+                className={`rounded-full px-2.5 py-1 font-semibold ${v.tipo === "admin" ? "bg-noite text-white" : v.tipo === "membro" ? "bg-roxo-suave text-roxo-escuro" : v.tipo === "pin" ? "bg-alerta-suave text-alerta-escuro" : "bg-fundo text-apagado"}`}
+              >
+                {v.nome}
+                {v.tipo === "admin" ? " · admin" : v.tipo === "pin" ? " · PIN" : ""}
+              </span>
+            ))}
+        </div>
+      )}
 
       {pendentes > 0 && (
         <p className="rounded-xl bg-alerta-suave px-3 py-2 text-sm font-semibold text-alerta-escuro">
