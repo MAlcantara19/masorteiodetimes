@@ -33,7 +33,7 @@ function relogioAte(ms: number) {
 
 export default function ListaAppPage() {
   const { pelada, slug, naoAchou } = usePelada();
-  const { carregando, usuario, vinculos, ehAdmin } = useSessao();
+  const { carregando, usuario, vinculos, ehAdmin, recarregar } = useSessao();
   const admin = pelada ? ehAdmin(pelada.id) : false;
   const meuId = vinculos.find((v) => v.pelada.id === pelada?.id)?.membro_id ?? null;
   const [evento, setEvento] = useState<EventoLista | null | undefined>(undefined);
@@ -46,6 +46,7 @@ export default function ListaAppPage() {
   const [convidado, setConvidado] = useState("");
   const [noGol, setNoGol] = useState(false);
   const [busca, setBusca] = useState("");
+  const [souBusca, setSouBusca] = useState("");
 
   const carregarPres = useCallback(async (id: string) => {
     const { data } = await criarClienteSupabase().from("presencas").select("*").eq("evento_id", id).order("ordem");
@@ -123,6 +124,21 @@ export default function ListaAppPage() {
   const sb = criarClienteSupabase();
   const entrar = (modo: "eu" | "convidado" | "sou_convidado", nomeConv?: string) =>
     evento && rpc(() => sb.rpc("lista_entrar", { p_evento: evento.id, p_modo: modo, p_nome: nomeConv ?? null, p_goleiro: noGol }), modo === "convidado" ? "Convidado na lista (atrás da galera do grupo)." : "Seu nome está na lista! ✅");
+  // "Sou eu": escolhe o próprio nome no elenco (SQL 0008).
+  async function souEu(m: Membro) {
+    if (!pelada || !confirm(`Você é ${nomeCurto(m)}${m.apelido && m.apelido !== m.nome ? ` (${m.nome})` : ""}? Seu login fica ligado a esse nome.`)) return;
+    setOcupado(true);
+    const { error } = await criarClienteSupabase().rpc("sou_eu", { p_pelada: pelada.id, p_membro: m.id });
+    setOcupado(false);
+    if (error) {
+      const msg = error.message;
+      return setAviso({ ok: false, txt: msg.includes("nome_ocupado") ? "Esse nome já está ligado a outra conta. Fala com o admin." : msg.includes("ja_ligado") ? "Sua conta já está ligada a um nome." : msg.includes("Could not find") ? "Falta rodar o SQL 0008 no Supabase." : "Não deu certo." });
+    }
+    await recarregar();
+    setAviso({ ok: true, txt: `Pronto, ${nomeCurto(m)}! Agora é só pôr o nome na lista.` });
+    elencoRapido(pelada.id, setElenco);
+  }
+
   const sair = (membroId?: string) => evento && rpc(() => sb.rpc("lista_sair", { p_evento: evento.id, p_membro: membroId ?? null }), "Nome tirado da lista.");
 
   // ---------- Admin ----------
@@ -316,9 +332,20 @@ export default function ListaAppPage() {
             </>
           ) : (
             <>
-              <span className="text-sm">
-                Sua conta ainda não está ligada a um nome do grupo. Se você é do grupo, pede pro admin ligar seu e-mail ao seu nome. Se não é, entra como convidado (fica na espera, atrás da galera do grupo).
-              </span>
+              <span className="text-sm font-semibold">Você é do grupo? Toca no seu nome:</span>
+              <input value={souBusca} onChange={(e) => setSouBusca(e.target.value)} placeholder="Procurar meu nome…" aria-label="Procurar meu nome" className="h-10 rounded-xl border border-borda bg-fundo px-3 text-sm" />
+              <div className="flex max-h-56 flex-wrap gap-1.5 overflow-auto">
+                {elenco
+                  .filter((m) => m.ativo && !m.profile_id && !ehReserva(m) && !m.nome.startsWith("Convidado"))
+                  .filter((m) => !souBusca.trim() || `${m.nome} ${m.apelido ?? ""} ${(m.apelidos ?? []).join(" ")}`.toLowerCase().includes(souBusca.trim().toLowerCase()))
+                  .sort((a, b) => nomeCurto(a).localeCompare(nomeCurto(b), "pt-BR"))
+                  .map((m) => (
+                    <button key={m.id} type="button" disabled={ocupado} onClick={() => souEu(m)} className="h-9 rounded-full border border-roxo/40 bg-white px-3 text-sm font-semibold text-roxo-escuro">
+                      {nomeCurto(m)}
+                    </button>
+                  ))}
+              </div>
+              <span className="border-t border-borda pt-2 text-[13px] text-apagado">Não é do grupo? Entra como convidado (fica na espera, atrás da galera do grupo).</span>
               <button type="button" onClick={() => entrar("sou_convidado")} disabled={ocupado || fechadaAinda} className="h-12 rounded-xl border-2 border-roxo font-bold text-roxo disabled:opacity-40">
                 Sou convidado, quero jogar
               </button>

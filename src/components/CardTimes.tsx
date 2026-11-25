@@ -1,10 +1,29 @@
 "use client";
 // O "cartão" dos times: é ele que vira imagem pra mandar no grupo.
 // Regra de ouro: nada de nota aqui quando `semNotas` (imagem). As médias só aparecem pra admin, no app.
+// `comFotos`: a carinha de cada um (foto do perfil; quem não tem foto ganha as iniciais na cor do time).
 import { forwardRef } from "react";
 import { CORES_TIMES, NOMES_TIMES } from "@/lib/evento";
 
-export type TimeCard = { jogadores: { id: string; nome: string }[]; goleiro: string | null; media?: number };
+export type TimeCard = { jogadores: { id: string; nome: string; foto?: string | null }[]; goleiro: string | null; goleiroFoto?: string | null; media?: number };
+
+function Rosto({ nome, foto, cor, tamanho }: { nome: string; foto?: string | null; cor: string; tamanho: number }) {
+  const iniciais = nome
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0])
+    .join("")
+    .toUpperCase();
+  return foto ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img src={foto} alt="" crossOrigin="anonymous" className="shrink-0 rounded-full object-cover" style={{ width: tamanho, height: tamanho }} />
+  ) : (
+    <span className="flex shrink-0 items-center justify-center rounded-full font-bold text-white" style={{ width: tamanho, height: tamanho, background: cor, fontSize: tamanho * 0.4 }}>
+      {iniciais}
+    </span>
+  );
+}
 
 type Props = {
   pelada: string;
@@ -15,10 +34,11 @@ type Props = {
   selecionado?: [number, number] | null;
   aoTocar?: (time: number, pos: number) => void;
   mostrarMedias?: boolean;
+  comFotos?: boolean;
 };
 
 const CardTimes = forwardRef<HTMLDivElement, Props>(function CardTimes(
-  { pelada, subtitulo, times, escuro, formato, selecionado, aoTocar, mostrarMedias },
+  { pelada, subtitulo, times, escuro, formato, selecionado, aoTocar, mostrarMedias, comFotos },
   ref,
 ) {
   const colunas = formato === "vertical" ? 1 : times.length === 3 ? 3 : 2;
@@ -38,18 +58,28 @@ const CardTimes = forwardRef<HTMLDivElement, Props>(function CardTimes(
             <div className="flex flex-col py-1">
               {t.jogadores.map((j, pi) => {
                 const sel = selecionado?.[0] === ti && selecionado?.[1] === pi;
-                const classe = `min-h-8 px-2.5 text-left text-sm font-medium leading-tight ${sel ? (escuro ? "bg-roxo/60" : "bg-roxo-suave") : ""}`;
+                const classe = `min-h-8 px-2.5 text-left text-sm font-medium leading-tight ${comFotos ? "flex items-center gap-1.5 py-0.5" : ""} ${sel ? (escuro ? "bg-roxo/60" : "bg-roxo-suave") : ""}`;
+                const conteudo = (
+                  <>
+                    {comFotos && <Rosto nome={j.nome} foto={j.foto} cor={CORES_TIMES[ti]} tamanho={26} />}
+                    <span className="min-w-0 truncate">{j.nome}</span>
+                  </>
+                );
                 return aoTocar ? (
                   <button key={j.id} type="button" onClick={() => aoTocar(ti, pi)} className={classe}>
-                    {j.nome}
+                    {conteudo}
                   </button>
                 ) : (
                   <span key={j.id} className={`${classe} flex items-center`}>
-                    {j.nome}
+                    {conteudo}
                   </span>
                 );
               })}
-              {t.goleiro && <span className={`px-2.5 pt-1 pb-0.5 text-[13px] ${escuro ? "text-[#B9AFCB]" : "text-apagado"}`}>🧤 {t.goleiro}</span>}
+              {t.goleiro && (
+                <span className={`flex items-center gap-1.5 px-2.5 pt-1 pb-0.5 text-[13px] ${escuro ? "text-[#B9AFCB]" : "text-apagado"}`}>
+                  {comFotos ? <Rosto nome={t.goleiro} foto={t.goleiroFoto} cor="#1B1430" tamanho={22} /> : null}🧤 {t.goleiro}
+                </span>
+              )}
             </div>
           </div>
         ))}

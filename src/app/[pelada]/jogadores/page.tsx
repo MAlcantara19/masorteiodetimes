@@ -64,6 +64,7 @@ export default function JogadoresPage() {
   const [edit, setEdit] = useState<Rascunho | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [juntarCom, setJuntarCom] = useState("");
   const [temLocal, setTemLocal] = useState(0);
 
   const recarregar = useCallback(async () => {
@@ -169,6 +170,28 @@ export default function JogadoresPage() {
     recarregar();
   }
 
+  async function desligarConta() {
+    if (!edit?.id || !confirm("Desligar a conta deste nome? A pessoa vai poder escolher o nome certo de novo.")) return;
+    const { error } = await criarClienteSupabase().rpc("desligar_conta", { p_membro: edit.id });
+    if (error) return setAviso(error.message.includes("Could not find") ? "Falta rodar o SQL 0008 no Supabase." : "Não deu pra desligar (admin não pode ser desligado assim).");
+    setEdit({ ...edit, profile_id: null });
+    recarregar();
+  }
+
+  async function juntar() {
+    if (!edit?.id || !juntarCom) return;
+    const outro = (elenco ?? []).find((m) => m.id === juntarCom);
+    if (!outro) return;
+    if (outro.profile_id && edit.profile_id) return setAviso("As duas fichas têm conta. Desliga uma delas primeiro.");
+    if (!confirm(`Juntar "${nomeCurto(outro)}" em "${edit.nome}"? A ficha "${nomeCurto(outro)}" some e tudo dela vem pra cá. Não dá pra desfazer.`)) return;
+    const { error } = await criarClienteSupabase().rpc("juntar_membros", { p_manter: edit.id, p_juntar: juntarCom });
+    if (error) return setAviso(error.message.includes("Could not find") ? "Falta rodar o SQL 0008 no Supabase." : "Não deu pra juntar as fichas.");
+    setJuntarCom("");
+    setEdit(null);
+    setAviso("Fichas juntadas!");
+    recarregar();
+  }
+
   async function importarLocal() {
     if (!pelada || !usuario) return;
     const locais = elencoLocal();
@@ -209,7 +232,9 @@ export default function JogadoresPage() {
         <input value={busca} onChange={(e) => setBusca(e.target.value)} placeholder="Buscar jogador" className="h-full flex-1 bg-transparent text-[15px] outline-none" />
       </label>
       <div className="flex items-center justify-between text-[13px] text-apagado">
-        <span>Toca no jogador pra avaliar · {ativos} no elenco</span>
+        <span>
+          Toca no jogador pra avaliar · {ativos} no elenco · 🔗 {elenco.filter((m) => m.ativo && m.profile_id).length} com conta
+        </span>
         <button type="button" onClick={() => setMostrarInativos(!mostrarInativos)} className="font-semibold text-roxo">
           {mostrarInativos ? "Esconder inativos" : "Ver inativos"}
         </button>
@@ -240,6 +265,8 @@ export default function JogadoresPage() {
                   {m.goleiro && <span className="ml-1.5 rounded bg-roxo-suave px-1.5 py-0.5 text-[11px] text-roxo-escuro">GOL</span>}
                   {m.convidado && <span className="ml-1.5 rounded bg-alerta-suave px-1.5 py-0.5 text-[11px] text-alerta-escuro">convidado</span>}
                   {m.papel === "admin" && <span className="ml-1.5 rounded bg-noite px-1.5 py-0.5 text-[11px] text-white">admin</span>}
+                  {m.mensalista && <span className="ml-1.5 rounded bg-roxo-suave px-1.5 py-0.5 text-[11px] font-bold text-roxo-escuro">MENSAL</span>}
+                  {m.profile_id && <span className="ml-1.5 text-[12px]" title="Ligado a uma conta">🔗</span>}
                 </span>
                 <span className="truncate text-[13px] text-apagado">
                   {CURTO[String(n)]} · {POSICOES[m.posicao]}
@@ -362,6 +389,42 @@ export default function JogadoresPage() {
                 className="h-11 rounded-xl border border-borda px-3 text-[15px] font-normal"
               />
             </label>
+
+            {edit.id && edit.profile_id && (
+              <div className="flex items-center justify-between gap-2 rounded-xl bg-fundo px-3 py-2 text-[13px]">
+                <span>🔗 Ligado a uma conta do Google (a pessoa escolheu o nome ou o admin ligou).</span>
+                <button type="button" onClick={desligarConta} className="shrink-0 font-semibold text-alerta-escuro">
+                  Desligar
+                </button>
+              </div>
+            )}
+
+            {edit.id && (
+              <div className="flex flex-col gap-1.5 rounded-xl border border-dashed border-borda p-3 text-[13px]">
+                <span className="font-semibold">É a mesma pessoa que outra ficha? Juntar</span>
+                <span className="text-apagado">
+                  Ex.: ele entrou no app e virou uma ficha nova. Escolhe a outra ficha: tudo dela (conta, gols, presença, votos) vem pra esta, que mantém a nota, e a outra some.
+                </span>
+                <div className="flex gap-2">
+                  <select value={juntarCom} onChange={(e) => setJuntarCom(e.target.value)} aria-label="Ficha pra juntar" className="h-10 min-w-0 flex-1 rounded-xl border border-borda bg-white px-2 text-sm">
+                    <option value="">Escolhe a outra ficha…</option>
+                    {(elenco ?? [])
+                      .filter((m) => m.id !== edit.id && !ehReserva(m))
+                      .sort((a, b) => Number(!!b.profile_id) - Number(!!a.profile_id) || nomeCurto(a).localeCompare(nomeCurto(b)))
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>
+                          {nomeCurto(m)}
+                          {m.profile_id ? " · tem conta 🔗" : ""}
+                          {m.convidado ? " · convidado" : ""}
+                        </option>
+                      ))}
+                  </select>
+                  <button type="button" onClick={juntar} disabled={!juntarCom} className="h-10 shrink-0 rounded-xl bg-noite px-3 text-sm font-semibold text-white disabled:opacity-40">
+                    Juntar
+                  </button>
+                </div>
+              </div>
+            )}
 
             {aviso && (
               <p role="alert" className="rounded-xl bg-alerta-suave px-3 py-2 text-sm text-alerta-escuro">

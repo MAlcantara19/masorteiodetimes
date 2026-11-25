@@ -49,6 +49,9 @@ export default function TimesPage() {
   const [apagados, setApagados] = useState<{ numero: number; times: string[][]; goleiros: (string | null)[] | null; espera: string[] | null }[]>([]);
   const [anterior, setAnterior] = useState<{ data: string; times: string[][] } | null | undefined>(undefined);
   const [comparando, setComparando] = useState(false);
+  // Fotos dos perfis (pra imagem com a carinha de cada um).
+  const [fotos, setFotos] = useState<Map<string, string>>(new Map());
+  const [comFotos, setComFotos] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const todosRef = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -75,6 +78,21 @@ export default function TimesPage() {
   }, [evento, admin]);
 
   const porId = useMemo(() => new Map(elenco.map((m) => [m.id, m])), [elenco]);
+
+  useEffect(() => {
+    const ids = [...new Set(elenco.map((m) => m.profile_id).filter((x): x is string => !!x))];
+    if (!ids.length) return;
+    criarClienteSupabase()
+      .from("perfis_publicos")
+      .select("id, foto_url")
+      .in("id", ids)
+      .then(({ data }) => {
+        const doPerfil = new Map(((data ?? []) as { id: string; foto_url: string | null }[]).filter((p) => p.foto_url).map((p) => [p.id, p.foto_url as string]));
+        const m = new Map<string, string>();
+        for (const x of elenco) if (x.profile_id && doPerfil.has(x.profile_id)) m.set(x.id, doPerfil.get(x.profile_id) as string);
+        setFotos(m);
+      });
+  }, [elenco]);
   const modo = slug ? lerConfig(slug).modo : "simples";
 
   function montarCard(s: SorteioSalvo, comMedias: boolean): TimeCard[] {
@@ -82,8 +100,9 @@ export default function TimesPage() {
       const membros = t.map((id) => porId.get(id)).filter((m): m is Membro => !!m);
       const gk = s.goleiros?.[i] ? porId.get(s.goleiros[i] as string) : null;
       return {
-        jogadores: membros.map((m) => ({ id: m.id, nome: nomeCurto(m) })),
+        jogadores: membros.map((m) => ({ id: m.id, nome: nomeCurto(m), foto: fotos.get(m.id) ?? null })),
         goleiro: gk ? nomeCurto(gk) : null,
+        goleiroFoto: gk ? (fotos.get(gk.id) ?? null) : null,
         media: comMedias && membros.length ? membros.reduce((a, m) => a + notaDoMembro(m, modo), 0) / membros.length : undefined,
       };
     });
@@ -379,6 +398,12 @@ export default function TimesPage() {
           aoMudar={(v) => setEscuro(v === "e")}
           opcoes={[{ valor: "c", rotulo: "Claro" }, { valor: "e", rotulo: "Escuro" }]}
         />
+        <Escolha
+          rotulo="Fotos"
+          valor={comFotos ? "f" : "s"}
+          aoMudar={(v) => setComFotos(v === "f")}
+          opcoes={[{ valor: "s", rotulo: "Sem foto" }, { valor: "f", rotulo: "Com foto" }]}
+        />
       </div>
 
       {admin && diferenca >= 0.5 && (
@@ -398,6 +423,7 @@ export default function TimesPage() {
         selecionado={gerandoImagem ? null : sel}
         aoTocar={admin ? tocar : undefined}
         mostrarMedias={admin && !gerandoImagem}
+        comFotos={comFotos}
       />
 
       {/* Cópias escondidas, só pra gerar "Baixar as 4" (sem notas). */}
@@ -414,6 +440,7 @@ export default function TimesPage() {
               times={montarCard(x, false)}
               escuro={escuro}
               formato={formato}
+              comFotos={comFotos}
             />
           ))}
         </div>

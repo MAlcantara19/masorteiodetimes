@@ -52,6 +52,7 @@ type FolhaAberta =
   | { tipo: "goleiro"; lado: "a" | "b" }
   | { tipo: "times" }
   | { tipo: "penaltis" }
+  | { tipo: "resultado"; partidaId: string }
   | { tipo: "pin"; depois: (() => void) | null }
   | null;
 
@@ -384,7 +385,8 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
     carregar();
   }
 
-  async function encerrarEChamar(vencedorPenaltis?: number) {
+  // Encerra o jogo e mostra o resultado: o tempo fica na tela e o próximo só entra quando tocar em "Chamar o próximo".
+  async function encerrar(vencedorPenaltis?: number) {
     if (!partida || !dados) return;
     const empate = partida.placar_a === partida.placar_b;
     if (empate && pelada.regra_empate === "penaltis" && vencedorPenaltis === undefined) {
@@ -395,9 +397,40 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
     await acao("encerrar");
     setZapJogo(partida.id);
     if (vencedorPenaltis !== undefined) await acao("vencedor", { vencedor: vencedorPenaltis });
+    setOcupado(false);
+    setFolha({ tipo: "resultado", partidaId: partida.id });
+  }
+
+  // Encerrou sem querer (ou alguém se machucou): volta o jogo pausado (SQL 0008).
+  async function voltarJogo() {
+    if (!partida) return;
+    if (!confirm("Voltar este jogo? Ele volta pausado e o tempo desde o encerrar conta como parado.")) return;
+    setOcupado(true);
+    const p = membro ? null : lerPin(pelada.id);
+    const { error } = await criarClienteSupabase().rpc("reabrir_partida", { p_partida: partida.id, p_pin: p?.pin ?? null });
+    setOcupado(false);
+    setFolha(null);
+    if (error) setAviso(error.message.includes("reabrir_partida") || error.message.includes("Could not find") ? "Falta rodar o SQL 0008 no Supabase pra voltar o jogo." : error.message);
+    carregar();
+  }
+
+  async function encerrarEChamar(vencedorPenaltis?: number) {
+    if (!partida || !dados) return;
+    const empate = partida.placar_a === partida.placar_b;
+    if (empate && pelada.regra_empate === "penaltis" && vencedorPenaltis === undefined && partida.status !== "encerrada") {
+      setFolha({ tipo: "penaltis" });
+      return;
+    }
+    setFolha(null);
+    setOcupado(true);
+    if (partida.status !== "encerrada") await acao("encerrar");
+    setZapJogo(partida.id);
+    if (vencedorPenaltis !== undefined) await acao("vencedor", { vencedor: vencedorPenaltis });
     // Calcula o próximo jogo com a partida já encerrada.
     const vencedor =
-      vencedorPenaltis ?? (partida.placar_a > partida.placar_b ? partida.time_a : partida.placar_b > partida.placar_a ? partida.time_b : null);
+      vencedorPenaltis ??
+      partida.vencedor ??
+      (partida.placar_a > partida.placar_b ? partida.time_a : partida.placar_b > partida.placar_a ? partida.time_b : null);
     const atualizadas = dados.partidas.map((p) => (p.id === partida.id ? { ...p, status: "encerrada" as const, vencedor } : p));
     const prox = calcularFila(qtdTimes, atualizadas, pelada.regra_empate).proximo;
     if (prox) {
@@ -602,6 +635,25 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
           {pendentes} {pendentes === 1 ? "ação esperando" : "ações esperando"} a internet voltar.
         </p>
       )}
+
+      {/* O jogo anterior continua na tela até o próximo começar (todo mundo vê quanto deu). */}
+      {partida.status === "aguardando" && ultimaEncerrada && (() => {
+        const u = ultimaEncerrada;
+        const rol = segundosRolando(u, agoraServidor);
+        const real = u.inicio_em && u.encerrada_em ? Math.max(rol, (new Date(u.encerrada_em).getTime() - new Date(u.inicio_em).getTime()) / 1000) : rol;
+        return (
+          <section className="flex flex-col gap-1 rounded-2xl border border-borda bg-white px-4 py-3 text-sm">
+            <span className="text-[11px] font-bold tracking-wider text-apagado">JOGO {u.numero} TERMINOU</span>
+            <span className="font-display text-lg font-bold">
+              {NOMES_TIMES[u.time_a]} {u.placar_a} × {u.placar_b} {NOMES_TIMES[u.time_b]}
+            </span>
+            <span className="text-[13px] text-apagado">
+              Bola rolando <strong className="text-tinta">{formatarRelogio(rol)}</strong> · tempo real <strong className="text-tinta">{formatarRelogio(real)}</strong> · parado{" "}
+              <strong className="text-tinta">{formatarRelogio(Math.max(0, real - rol))}</strong>
+            </span>
+          </section>
+        );
+      })()}
 
       {/* Relógio (pisca laranja/vermelho quando acaba o tempo ou bate os gols) */}
       <section className={`flex flex-col items-center gap-2 rounded-3xl px-4 pt-4 pb-5 text-white ${acabou ? "fim-tempo" : "bg-noite"}`}>
@@ -911,15 +963,25 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
       {podeMexer && (
         <div className="flex flex-col gap-2">
           {partida.status !== "encerrada" ? (
-            <button type="button" disabled={ocupado} onClick={() => comPermissao(() => encerrarEChamar())} className="h-14 rounded-2xl bg-roxo text-lg font-bold text-white disabled:opacity-50">
-              {ocupado ? "Chamando…" : "Encerrar jogo e chamar o próximo"}
+            <button type="button" disabled={ocupado} onClick={() => comPermissao(() => encerrar())} className="h-14 rounded-2xl bg-roxo text-lg font-bold text-white disabled:opacity-50">
+              {ocupado ? "Encerrando…" : "Encerrar jogo"}
             </button>
           ) : (
-            fila.proximo && (
-              <button type="button" disabled={ocupado} onClick={() => encerrarEChamar()} className="h-14 rounded-2xl bg-roxo text-lg font-bold text-white disabled:opacity-50">
-                Chamar o próximo jogo
-              </button>
-            )
+            <>
+              {fila.proximo && (
+                <button type="button" disabled={ocupado} onClick={() => comPermissao(() => encerrarEChamar())} className="h-14 rounded-2xl bg-roxo text-lg font-bold text-white disabled:opacity-50">
+                  {ocupado ? "Chamando…" : `Chamar o próximo: ${NOMES_TIMES[fila.proximo[0]]} × ${NOMES_TIMES[fila.proximo[1]]}`}
+                </button>
+              )}
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={() => setFolha({ tipo: "resultado", partidaId: partida.id })} className="h-11 rounded-xl border border-borda bg-white text-sm font-semibold">
+                  Ver o resultado
+                </button>
+                <button type="button" disabled={ocupado} onClick={() => comPermissao(() => voltarJogo())} className="h-11 rounded-xl border border-alerta bg-white text-sm font-semibold text-alerta-escuro">
+                  Voltar o jogo
+                </button>
+              </div>
+            </>
           )}
           <Link href={`/cronometro?min=${pelada.minutos}&gols=${pelada.regra_fim === "tempo" ? 0 : pelada.gols_limite}`} className="text-center text-xs font-semibold text-apagado underline">
             Internet ruim? Usar só o cronômetro do aparelho
@@ -1085,6 +1147,96 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
         />
       </Folha>
 
+      <Folha aberta={folha?.tipo === "resultado"} titulo="Fim de jogo" aoFechar={() => setFolha(null)}>
+        {folha?.tipo === "resultado" &&
+          (() => {
+            const p = dados.partidas.find((x) => x.id === folha.partidaId);
+            if (!p) return null;
+            const empate = p.placar_a === p.placar_b;
+            const v = p.vencedor ?? (p.placar_a > p.placar_b ? p.time_a : p.placar_b > p.placar_a ? p.time_b : null);
+            const atualizadas = dados.partidas.map((x) => (x.id === p.id ? { ...x, status: "encerrada" as const, vencedor: v } : x));
+            const fl = calcularFila(qtdTimes, atualizadas, pelada.regra_empate);
+            const anterior = dados.partidas.filter((x) => x.numero < p.numero && x.status === "encerrada").sort((a, b) => b.numero - a.numero)[0];
+            const veterano = anterior ? [p.time_a, p.time_b].find((t) => t === anterior.time_a || t === anterior.time_b) : undefined;
+            const regra =
+              v !== null
+                ? `${NOMES_TIMES[v]} venceu${empate ? " nos pênaltis" : ""}${qtdTimes > 2 ? " e fica" : ""}.`
+                : pelada.regra_empate === "sai_os_dois"
+                  ? "Empatou: saem os 2 times."
+                  : `Empatou: sai quem já estava${veterano !== undefined ? ` (${NOMES_TIMES[veterano]})` : ""}.`;
+            // Empate "sai os dois" sem 2 times de fora: um dos dois volta (quem já estava antes tem a preferência).
+            const pref = empate && v === null && pelada.regra_empate === "sai_os_dois" && fl.proximo ? fl.proximo.find((t) => t === p.time_a || t === p.time_b) : undefined;
+            const rol = segundosRolando(p, agoraServidor);
+            const real = p.inicio_em && p.encerrada_em ? Math.max(rol, (new Date(p.encerrada_em).getTime() - new Date(p.inicio_em).getTime()) / 1000) : rol;
+            const ehAtual = partida.id === p.id;
+            return (
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-center gap-3 font-display text-3xl font-bold">
+                  <span style={{ color: CORES_TIMES[p.time_a] }}>{NOMES_TIMES[p.time_a]}</span>
+                  <span>
+                    {p.placar_a} × {p.placar_b}
+                  </span>
+                  <span style={{ color: CORES_TIMES[p.time_b] }}>{NOMES_TIMES[p.time_b]}</span>
+                </div>
+                <p className={`rounded-xl px-3 py-2 text-center font-semibold ${v === null ? "bg-alerta-suave text-alerta-escuro" : "bg-roxo-suave text-roxo-escuro"}`}>
+                  {regra}
+                  {pref !== undefined && (
+                    <>
+                      <br />
+                      <span className="text-sm">Só tem um time de fora: {NOMES_TIMES[pref]} tem a preferência e volta.</span>
+                    </>
+                  )}
+                </p>
+                <div className="grid grid-cols-3 gap-1 text-center text-[11px] text-apagado">
+                  <span>
+                    Bola rolando
+                    <br />
+                    <strong className="font-display text-base text-tinta tabular-nums">{formatarRelogio(rol)}</strong>
+                  </span>
+                  <span>
+                    Tempo real
+                    <br />
+                    <strong className="font-display text-base text-tinta tabular-nums">{formatarRelogio(real)}</strong>
+                  </span>
+                  <span>
+                    Parado
+                    <br />
+                    <strong className="font-display text-base text-tinta tabular-nums">{formatarRelogio(Math.max(0, real - rol))}</strong>
+                  </span>
+                </div>
+                {fl.proximo && (
+                  <p className="text-center text-sm">
+                    Próximo jogo:{" "}
+                    <strong>
+                      {NOMES_TIMES[fl.proximo[0]]} × {NOMES_TIMES[fl.proximo[1]]}
+                    </strong>
+                    {fl.espera.length > 0 && <span className="text-apagado"> · depois: {fl.espera.map((t) => NOMES_TIMES[t]).join(", ")}</span>}
+                  </p>
+                )}
+                {podeMexer && ehAtual && fl.proximo && (
+                  <button type="button" disabled={ocupado} onClick={() => encerrarEChamar()} className="h-14 rounded-2xl bg-roxo text-lg font-bold text-white disabled:opacity-50">
+                    Chamar o próximo jogo
+                  </button>
+                )}
+                <div className="grid grid-cols-2 gap-2">
+                  <a href={zapDoJogo(p)} target="_blank" rel="noreferrer" className="flex h-11 items-center justify-center rounded-xl border-2 border-zap text-sm font-semibold text-zap">
+                    Mandar no grupo
+                  </a>
+                  {podeMexer && ehAtual ? (
+                    <button type="button" disabled={ocupado} onClick={() => voltarJogo()} className="h-11 rounded-xl border border-alerta text-sm font-semibold text-alerta-escuro">
+                      Voltar o jogo
+                    </button>
+                  ) : (
+                    <button type="button" onClick={() => setFolha(null)} className="h-11 rounded-xl border border-borda text-sm font-semibold">
+                      Fechar
+                    </button>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
+      </Folha>
+
       <Folha aberta={folha?.tipo === "penaltis"} titulo="Empatou. Quem ganhou nos pênaltis?" aoFechar={() => setFolha(null)}>
         <div className="grid grid-cols-2 gap-2">
           {lados.map((l) => (
@@ -1093,7 +1245,7 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
               type="button"
               onClick={() => {
                 setFolha(null);
-                encerrarEChamar(l.time);
+                encerrar(l.time);
               }}
               className="h-14 rounded-xl font-bold text-white"
               style={{ background: CORES_TIMES[l.time] }}
