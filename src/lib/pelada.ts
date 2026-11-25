@@ -37,6 +37,7 @@ export type Pelada = {
   aviso_dia?: boolean;
   aviso_2h?: boolean;
   cor_menu?: string | null; // (SQL 0009) cor (padrão) | claro | escuro
+  camisa?: import("@/components/Camisa").OpcoesCamisa | null; // (SQL 0009) camisa montada peça por peça
   cor_secundaria?: string | null; // (SQL 0004)
   camisa_estilo?: string | null;
   plano?: string | null;

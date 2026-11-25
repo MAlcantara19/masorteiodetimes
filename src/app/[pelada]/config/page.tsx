@@ -10,9 +10,9 @@ import Topo, { Carregando } from "@/components/Topo";
 import FormPelada from "@/components/FormPelada";
 import QrPix from "@/components/QrPix";
 import type { Pelada } from "@/lib/pelada";
-import Camisa, { ESTILOS_CAMISA, siglaDe } from "@/components/Camisa";
+import Camisa, { ESTILOS_CAMISA, resolverCamisa, siglaDe, type EstiloCamisa, type OpcoesCamisa } from "@/components/Camisa";
 import Bloqueado from "@/components/Bloqueado";
-import { Escolha } from "@/components/Folha";
+import { Escolha, Interruptor } from "@/components/Folha";
 import { PALETA } from "@/lib/cores";
 import { temRecurso } from "@/lib/planos";
 
@@ -41,33 +41,94 @@ function Bolinhas({ valor, mudar, rotulo }: { valor: string; mudar: (c: string) 
   );
 }
 
-// Cores da pelada e a camisa (o app inteiro fica com a cor escolhida).
+// Cores da pelada e a camisa montada peça por peça (o app inteiro fica com a cor escolhida).
 function ConfigCores({ pelada, nomeAdmin, numeroAdmin, aoSalvar }: { pelada: Pelada; nomeAdmin: string; numeroAdmin: number; aoSalvar: () => void }) {
+  const inicial = resolverCamisa(pelada.camisa_estilo, pelada.camisa);
   const [cor, setCor] = useState(pelada.cor_banner || "#7444D6");
   const [cor2, setCor2] = useState(pelada.cor_secundaria || "#FFFFFF");
-  const [estilo, setEstilo] = useState(pelada.camisa_estilo || "lisa");
+  const [estilo, setEstilo] = useState<EstiloCamisa>(inicial.modelo);
+  const [op, setOp] = useState<OpcoesCamisa>({ ...inicial.op, cor3: inicial.op.cor3 ?? null });
   const [menu, setMenu] = useState(pelada.cor_menu === "claro" || pelada.cor_menu === "escuro" ? pelada.cor_menu : "cor");
   const [erro, setErro] = useState<string | null>(null);
+  const mudar = (n: Partial<OpcoesCamisa>) => setOp({ ...op, ...n });
+
+  // Trocar de modelo usa a gola/tom sugeridos dele, mantendo as cores escolhidas.
+  function escolherModelo(m: EstiloCamisa) {
+    setEstilo(m);
+    const sugestao = ESTILOS_CAMISA.find((e) => e.valor === m)?.padrao ?? {};
+    setOp({ ...op, ...sugestao });
+  }
+
   async function salvar() {
     const sb = criarClienteSupabase();
     const { error } = await sb.from("peladas").update({ cor_banner: cor, cor_secundaria: cor2, camisa_estilo: estilo }).eq("id", pelada.id);
     if (error) return setErro(/check/i.test(error.message) ? "Esse modelo novo precisa do SQL 0009 no Supabase." : "Não deu pra salvar: " + error.message);
-    if ((pelada.cor_menu ?? "cor") !== menu) {
-      const r = await sb.from("peladas").update({ cor_menu: menu }).eq("id", pelada.id);
-      if (r.error) return setErro("Cores salvas. A cor do menu precisa do SQL 0009 no Supabase.");
-    }
+    const r = await sb.from("peladas").update({ camisa: op, cor_menu: menu }).eq("id", pelada.id);
+    if (r.error) return setErro("Cores salvas. A camisa montada e a cor do menu precisam do SQL 0009 no Supabase.");
     setErro(null);
     aoSalvar();
   }
+
+  const opcoesEscolha = <T extends string>(rotulo: string, valor: T, set: (v: T) => void, opcoes: { valor: T; rotulo: string }[]) => (
+    <div className="flex flex-col gap-1.5">
+      <span className="text-[13px] font-semibold">{rotulo}</span>
+      <Escolha rotulo={rotulo} valor={valor} aoMudar={set} opcoes={opcoes} />
+    </div>
+  );
+
   return (
     <section className="flex flex-col gap-3 rounded-2xl border border-borda bg-white p-4">
       <span className="font-semibold">Cores e camisa da pelada</span>
-      <div className="flex justify-center gap-2 rounded-2xl bg-fundo py-3">
-        <Camisa cor={cor} cor2={cor2} estilo={estilo} logo={pelada.logo_url} sigla={siglaDe(pelada.nome)} largura={140} />
-        <Camisa cor={cor} cor2={cor2} estilo={estilo} costas={{ nome: nomeAdmin, numero: numeroAdmin }} largura={140} />
+      <div className="sticky top-2 z-10 flex justify-center gap-2 rounded-2xl bg-fundo py-3 shadow-sm">
+        <Camisa cor={cor} cor2={cor2} estilo={estilo} opcoes={op} logo={pelada.logo_url} sigla={siglaDe(pelada.nome)} largura={140} />
+        <Camisa cor={cor} cor2={cor2} estilo={estilo} opcoes={op} costas={{ nome: nomeAdmin, numero: numeroAdmin }} largura={140} />
       </div>
       <Bolinhas rotulo="Cor principal (vira a cor do app nesta pelada)" valor={cor} mudar={setCor} />
-      <Bolinhas rotulo="Cor do detalhe" valor={cor2} mudar={setCor2} />
+      <Bolinhas rotulo="Cor do detalhe (gola, punho e frisos)" valor={cor2} mudar={setCor2} />
+
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[13px] font-semibold">Modelo</span>
+        <div className="grid grid-cols-4 gap-1.5">
+          {ESTILOS_CAMISA.map((e) => (
+            <button
+              key={e.valor}
+              type="button"
+              onClick={() => escolherModelo(e.valor)}
+              aria-pressed={estilo === e.valor}
+              className={`flex flex-col items-center gap-0.5 rounded-xl border-2 px-1 pt-1.5 pb-1 text-[11px] leading-tight font-semibold ${estilo === e.valor ? "border-roxo bg-roxo-suave text-roxo-escuro" : "border-transparent bg-fundo"}`}
+            >
+              <Camisa cor={cor} cor2={cor2} estilo={e.valor} opcoes={{ ...(e.padrao ?? {}), cor3: op.cor3 }} sigla={siglaDe(pelada.nome)} logo={pelada.logo_url} largura={58} />
+              {e.rotulo}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-2xl bg-fundo p-3">
+        <span className="text-xs font-bold tracking-wider text-apagado">MONTE A CAMISA</span>
+        {estilo !== "lisa" &&
+          opcoesEscolha("Desenho", op.tom ?? "contraste", (v) => mudar({ tom: v }), [
+            { valor: "tom", rotulo: "Tom sobre tom" },
+            { valor: "contraste", rotulo: "Em destaque" },
+          ])}
+        {estilo !== "lisa" && op.tom !== "tom" && <Bolinhas rotulo="Cor do desenho" valor={op.cor3 || cor2} mudar={(c) => mudar({ cor3: c })} />}
+        {opcoesEscolha("Gola", op.gola ?? "redonda", (v) => mudar({ gola: v }), [
+          { valor: "redonda", rotulo: "Redonda" },
+          { valor: "v", rotulo: "V" },
+          { valor: "retro", rotulo: "Retrô" },
+          { valor: "polo", rotulo: "Polo" },
+        ])}
+        {opcoesEscolha("Mangas", op.mangas ?? "iguais", (v) => mudar({ mangas: v }), [
+          { valor: "iguais", rotulo: "Iguais" },
+          { valor: "detalhe", rotulo: "Cor do detalhe" },
+          { valor: "raglan", rotulo: "Ombro e manga" },
+        ])}
+        <div className="flex items-center justify-between">
+          <span className="text-[13px] font-semibold">Friso no ombro</span>
+          <Interruptor rotulo="Friso no ombro" ligado={!!op.friso} aoMudar={(v) => mudar({ friso: v })} />
+        </div>
+      </div>
+
       <div className="flex flex-col gap-1.5">
         <span className="text-[13px] font-semibold">Barra de menu (embaixo)</span>
         <Escolha
@@ -80,23 +141,6 @@ function ConfigCores({ pelada, nomeAdmin, numeroAdmin, aoSalvar }: { pelada: Pel
             { valor: "escuro", rotulo: "Escura" },
           ]}
         />
-      </div>
-      <div className="flex flex-col gap-1.5">
-        <span className="text-[13px] font-semibold">Modelo</span>
-        <div className="grid grid-cols-4 gap-1.5">
-          {ESTILOS_CAMISA.map((e) => (
-            <button
-              key={e.valor}
-              type="button"
-              onClick={() => setEstilo(e.valor)}
-              aria-pressed={estilo === e.valor}
-              className={`flex flex-col items-center gap-0.5 rounded-xl border-2 px-1 pt-1.5 pb-1 text-[11px] leading-tight font-semibold ${estilo === e.valor ? "border-roxo bg-roxo-suave text-roxo-escuro" : "border-transparent bg-fundo"}`}
-            >
-              <Camisa cor={cor} cor2={cor2} estilo={e.valor} sigla={siglaDe(pelada.nome)} logo={pelada.logo_url} largura={54} />
-              {e.rotulo}
-            </button>
-          ))}
-        </div>
       </div>
       <span className="text-xs text-apagado">Cor muito clara? O app escurece um pouco os botões pra continuar dando pra ler.</span>
       {erro && <p className="rounded-xl bg-alerta-suave px-3 py-2 text-sm text-alerta-escuro">{erro}</p>}

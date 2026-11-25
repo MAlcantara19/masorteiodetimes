@@ -115,11 +115,11 @@ export default function PaginaPublica() {
         <section className="flex flex-col items-center gap-2 rounded-2xl border border-borda bg-white p-4">
           <span className="self-start text-xs font-bold tracking-wider text-apagado">A CAMISA DA {pelada.nome.toUpperCase()}</span>
           <div className="flex justify-center gap-2">
-            <Camisa cor={pelada.cor_banner || "#7444D6"} cor2={pelada.cor_secundaria || "#FFFFFF"} estilo={pelada.camisa_estilo} logo={pelada.logo_url} sigla={siglaDe(pelada.nome)} largura={130} />
+            <Camisa cor={pelada.cor_banner || "#7444D6"} cor2={pelada.cor_secundaria || "#FFFFFF"} estilo={pelada.camisa_estilo} opcoes={pelada.camisa} logo={pelada.logo_url} sigla={siglaDe(pelada.nome)} largura={130} />
             <Camisa
               cor={pelada.cor_banner || "#7444D6"}
               cor2={pelada.cor_secundaria || "#FFFFFF"}
-              estilo={pelada.camisa_estilo}
+              estilo={pelada.camisa_estilo} opcoes={pelada.camisa}
               costas={{ nome: perfil?.apelido || perfil?.nome?.split(" ")[0] || "Craque", numero: perfil?.numero_camisa ?? 10 }}
               largura={130}
             />

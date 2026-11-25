@@ -52,11 +52,11 @@ export default function ConvitePage() {
       {temRecurso(pelada, "cores") && (
         <section className="flex flex-col items-center gap-1 rounded-2xl border border-borda bg-white p-4 text-center">
           <div className="flex justify-center gap-1">
-            <Camisa cor={pelada.cor_banner || "#7444D6"} cor2={pelada.cor_secundaria || "#FFFFFF"} estilo={pelada.camisa_estilo} logo={pelada.logo_url} sigla={siglaDe(pelada.nome)} largura={120} />
+            <Camisa cor={pelada.cor_banner || "#7444D6"} cor2={pelada.cor_secundaria || "#FFFFFF"} estilo={pelada.camisa_estilo} opcoes={pelada.camisa} logo={pelada.logo_url} sigla={siglaDe(pelada.nome)} largura={120} />
             <Camisa
               cor={pelada.cor_banner || "#7444D6"}
               cor2={pelada.cor_secundaria || "#FFFFFF"}
-              estilo={pelada.camisa_estilo}
+              estilo={pelada.camisa_estilo} opcoes={pelada.camisa}
               costas={{ nome: perfil?.apelido || perfil?.nome?.split(" ")[0] || "Você", numero: perfil?.numero_camisa ?? 10 }}
               largura={120}
             />

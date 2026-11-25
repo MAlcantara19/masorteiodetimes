@@ -74,10 +74,8 @@ create policy "avisos: quem é da pelada lê" on public.avisos for select using 
 drop policy if exists "avisos: admin escreve" on public.avisos;
 create policy "avisos: admin escreve" on public.avisos for all using (public.eh_admin(pelada_id)) with check (public.eh_admin(pelada_id));
 
--- 4) Camisas novas (mais modelos) e a cor da barra de menu de cada pelada
+-- 4) Camisa montada peça por peça (modelo, tom sobre tom, cor do desenho, gola, mangas, friso)
+--    e a cor da barra de menu de cada pelada. O modelo agora é livre (o app confere), por isso sai a trava antiga.
 alter table public.peladas drop constraint if exists peladas_camisa_estilo_check;
-alter table public.peladas add constraint peladas_camisa_estilo_check check (camisa_estilo in (
-  'lisa', 'listras', 'listras_finas', 'listras_horizontais', 'faixa', 'faixa_peito', 'faixa_baixa',
-  'metade', 'quartos', 'centro', 'cruz', 'gola', 'mangas', 'ombros', 'lateral', 'polo',
-  'gradiente', 'chevron', 'geometrico', 'diagonal', 'xadrez', 'listras_degrade', 'pontilhado', 'raio'));
+alter table public.peladas add column if not exists camisa jsonb;    -- {tom, cor3, gola, mangas, friso}
 alter table public.peladas add column if not exists cor_menu text;   -- cor (padrão, a cor da pelada) | claro | escuro
