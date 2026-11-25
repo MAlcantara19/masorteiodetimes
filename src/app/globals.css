@@ -1,10 +1,19 @@
 @import "tailwindcss";
 
+/* Cor da pelada: o TemaPelada troca essas variáveis (padrão = roxo da marca). */
+:root {
+  --marca: #7444D6;
+  --marca-escuro: #4F2A9E;
+  --marca-suave: #EFE8FC;
+  --marca-claro: #C9B2FF;
+  --marca-luz: #9B6BFF;
+}
+
 @theme inline {
-  --color-roxo: #7444D6;
-  --color-roxo-escuro: #4F2A9E;
-  --color-roxo-suave: #EFE8FC;
-  --color-roxo-claro: #C9B2FF;
+  --color-roxo: var(--marca);
+  --color-roxo-escuro: var(--marca-escuro);
+  --color-roxo-suave: var(--marca-suave);
+  --color-roxo-claro: var(--marca-claro);
   --color-fundo: #F6F4FA;
   --color-borda: #E6E1EF;
   --color-noite: #1B1430;

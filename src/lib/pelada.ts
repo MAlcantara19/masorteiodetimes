@@ -25,6 +25,11 @@ export type Pelada = {
   pix_chave?: string | null; // (SQL 0003)
   pix_nome?: string | null;
   pix_cidade?: string | null;
+  cor_secundaria?: string | null; // (SQL 0004)
+  camisa_estilo?: string | null;
+  plano?: string | null;
+  recursos?: Record<string, boolean> | null;
+  plano_ate?: string | null;
 };
 
 export type Atributos = {
@@ -90,7 +95,7 @@ export function nomeCurto(m: { nome: string; apelido?: string | null }): string 
   return m.apelido?.trim() || m.nome;
 }
 
-export const SLUGS_RESERVADOS = ["mais", "entrar", "perfil", "master", "p", "auth", "api", "acompanhar", "sortear", "privacidade", "telao"];
+export const SLUGS_RESERVADOS = ["mais", "entrar", "perfil", "master", "p", "auth", "api", "acompanhar", "sortear", "privacidade", "telao", "compartilhar", "cronometro", "tour", "marca", "icons"];
 
 export function criarSlug(nome: string): string {
   return nome

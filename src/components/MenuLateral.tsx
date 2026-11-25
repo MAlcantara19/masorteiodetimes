@@ -3,7 +3,7 @@
 // e "Personalizar a barra de baixo" (a pessoa escolhe os 3 atalhos do meio).
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useSessao } from "@/lib/sessao";
 import { definirPeladaAtual, usePeladaAtual } from "@/lib/pelada-atual";
 import { atalhosPadrao, gravarAtalhos, MAX_ATALHOS, montarMenu, ouvirMenu, useAtalhos, type ItemMenu } from "@/lib/menu";
@@ -29,7 +29,9 @@ function Secao({ titulo, itens, fechar }: { titulo: string; itens: ItemMenu[]; f
 export default function MenuLateral() {
   const [aberto, setAberto] = useState(false);
   const [editando, setEditando] = useState(false);
+  const [trocando, setTrocando] = useState(false);
   const caminho = usePathname();
+  const router = useRouter();
   const { usuario, perfil, peladas, ehMaster, ehAdmin, sair } = useSessao();
   const atualSlug = usePeladaAtual();
   const escolhidos = useAtalhos();
@@ -55,6 +57,16 @@ export default function MenuLateral() {
   const opcoes = [...g.admin, ...g.jogador, ...g.geral].filter((i) => i.id !== "inicio");
   const atalhos = escolhidos ?? atalhosPadrao(admin);
 
+  // Troca de pelada e, se estiver numa tela da pelada, abre a mesma tela na outra.
+  function trocar(novo: string) {
+    const velho = atual?.slug;
+    definirPeladaAtual(novo);
+    setTrocando(false);
+    const partes = caminho.split("/");
+    if (velho && partes[1] === velho) router.push(["", novo, ...partes.slice(2)].join("/"));
+    else if (velho && partes[1] === "p" && partes[2] === velho) router.push(["", "p", novo, ...partes.slice(3)].join("/"));
+  }
+
   function alternar(id: string) {
     const n = atalhos.includes(id) ? atalhos.filter((x) => x !== id) : [...atalhos, id].slice(-MAX_ATALHOS);
     gravarAtalhos(n);
@@ -63,7 +75,7 @@ export default function MenuLateral() {
   return (
     <div className="fixed inset-0 z-[55] flex" role="dialog" aria-modal="true" aria-label="Menu">
       <div className="flex h-full w-[86%] max-w-sm flex-col overflow-y-auto bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl">
-        <div className="flex items-center gap-3 p-4" style={{ background: "radial-gradient(circle at 20% 0%, #9B6BFF 0%, #7444D6 45%, #4F2A9E 100%)" }}>
+        <div className="flex items-center gap-3 p-4" style={{ background: "radial-gradient(circle at 20% 0%, var(--marca-luz) 0%, var(--marca) 45%, var(--marca-escuro) 100%)" }}>
           <span className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-2 border-white/40 bg-roxo font-bold text-white">
             {perfil?.foto_url ? (
               // eslint-disable-next-line @next/next/no-img-element
@@ -89,9 +101,10 @@ export default function MenuLateral() {
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => definirPeladaAtual(p.slug)}
-                  className={`h-8 rounded-full border px-3 text-sm font-semibold ${p.id === atual?.id ? "border-roxo bg-roxo text-white" : "border-borda"}`}
+                  onClick={() => trocar(p.slug)}
+                  className={`flex h-8 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold ${p.id === atual?.id ? "border-roxo bg-roxo text-white" : "border-borda"}`}
                 >
+                  <span className="h-2.5 w-2.5 rounded-full border border-white/60" style={{ background: p.cor_banner || "#7444D6" }} />
                   {p.nome}
                 </button>
               ))}
@@ -141,6 +154,32 @@ export default function MenuLateral() {
         </div>
 
         <div className="mt-auto flex flex-col gap-1 border-t border-borda p-3 text-sm">
+          {peladas.length > 1 && (
+            <>
+              <button type="button" onClick={() => setTrocando(!trocando)} className="flex items-center justify-between py-1.5 text-left font-semibold">
+                <span>
+                  Trocar de pelada <span className="font-normal text-apagado">· agora: {atual?.nome}</span>
+                </span>
+                <span className="text-roxo">{trocando ? "Fechar" : "Trocar"}</span>
+              </button>
+              {trocando && (
+                <div className="flex flex-col gap-1 pb-2">
+                  {peladas.map((p) => (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => trocar(p.slug)}
+                      className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left ${p.id === atual?.id ? "bg-roxo-suave font-semibold" : "hover:bg-fundo"}`}
+                    >
+                      <span className="h-3 w-3 rounded-full" style={{ background: p.cor_banner || "#7444D6" }} />
+                      <span className="flex-1">{p.nome}</span>
+                      {ehAdmin(p.id) && <span className="text-xs text-apagado">admin</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
           <Link href="/mais" onClick={fechar} className="py-1.5 font-semibold text-roxo">
             Notificações, instalar o app e mais →
           </Link>

@@ -33,7 +33,7 @@ export default function Capa({ titulo, sub, voltar, direita, children, logo }: P
   return (
     <header
       className="relative flex flex-col gap-3 overflow-hidden rounded-3xl p-5 text-white"
-      style={{ background: "radial-gradient(circle at 20% 0%, #9B6BFF 0%, #7444D6 40%, #4F2A9E 75%, #1B1430 100%)" }}
+      style={{ background: "radial-gradient(circle at 20% 0%, var(--marca-luz) 0%, var(--marca) 40%, var(--marca-escuro) 75%, #1B1430 100%)" }}
     >
       <div aria-hidden="true" className="pointer-events-none absolute inset-0" style={{ background: "repeating-linear-gradient(125deg, rgba(255,255,255,0.06) 0 2px, transparent 2px 34px)" }} />
       <div className="relative flex items-center gap-3">

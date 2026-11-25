@@ -3,6 +3,10 @@
 import { useSyncExternalStore } from "react";
 import type { NomeIcone } from "@/components/Icone";
 import type { PeladaResumo } from "@/lib/sessao";
+import { temRecurso, type Recurso } from "@/lib/planos";
+
+// Itens que dependem do plano da pelada.
+const DO_PLANO: Record<string, Recurso> = { pagar: "pix", retrospectiva: "retrospectiva", banners: "banners", fotos: "fotos", album: "album", confrontos: "confrontos_admin" };
 
 export type ItemMenu = { id: string; href: string; titulo: string; sub: string; icone: NomeIcone };
 export type GruposMenu = { master: ItemMenu[]; admin: ItemMenu[]; jogador: ItemMenu[]; geral: ItemMenu[] };
@@ -33,7 +37,8 @@ export function montarMenu(atual: PeladaResumo | null, admin: boolean, ehMaster:
           { id: "resultados", href: `${b}/resultados`, titulo: "Resultados do dia", sub: "jogos, gols e correções", icone: "grafico" },
           { id: "banners", href: `${b}/banners`, titulo: "Banners", sub: "story e quadrado", icone: "imagem" },
           { id: "gestao", href: `${b}/gestao`, titulo: "Presença e mensalidade", sub: "quem veio, quem pagou", icone: "dinheiro" },
-          { id: "config", href: `${b}/config`, titulo: "Configurar pelada", sub: "horário, regra, Pix, PIN", icone: "lapis" },
+          { id: "confrontos", href: `${b}/confrontos`, titulo: "Confrontos", sub: "duplas que vencem e rivalidades", icone: "escudo" },
+          { id: "config", href: `${b}/config`, titulo: "Configurar pelada", sub: "cores, camisa, Pix, PIN", icone: "lapis" },
         ]
       : [];
   const master: ItemMenu[] = ehMaster
@@ -50,7 +55,8 @@ export function montarMenu(atual: PeladaResumo | null, admin: boolean, ehMaster:
     { id: "acompanhar", href: "/acompanhar", titulo: "Acompanhar outras peladas", sub: "ao vivo de qualquer pelada", icone: "link" },
     { id: "tour", href: "/tour", titulo: "Tour do app", sub: "tudo que o app faz, passo a passo", icone: "estrela" },
   ];
-  return { master, admin: adminItens, jogador, geral };
+  const libera = (i: ItemMenu) => !DO_PLANO[i.id] || temRecurso(atual, DO_PLANO[i.id], ehMaster);
+  return { master, admin: adminItens.filter(libera), jogador: jogador.filter(libera), geral };
 }
 
 // ---------- Atalhos da barra de baixo (o próprio usuário escolhe) ----------

@@ -8,6 +8,7 @@ import MenuLateral from "@/components/MenuLateral";
 import GuardaPerfil from "@/components/GuardaPerfil";
 import RetornoLogin from "@/components/RetornoLogin";
 import RegistrarSW from "@/components/RegistrarSW";
+import TemaPelada from "@/components/TemaPelada";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <Suspense fallback={null}>
             <GuardaPerfil />
             <RetornoLogin />
+            <TemaPelada />
           </Suspense>
           {children}
           <Suspense fallback={null}>

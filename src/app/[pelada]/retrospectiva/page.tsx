@@ -146,7 +146,7 @@ export default function RetrospectivaPage() {
           <div
             ref={ref}
             className="relative flex shrink-0 flex-col gap-5 overflow-hidden p-7 text-white"
-            style={{ width: 340, height: 604, background: "radial-gradient(circle at 20% 10%, #9B6BFF 0%, #7444D6 40%, #2A1660 85%, #1B1430 100%)" }}
+            style={{ width: 340, height: 604, background: "radial-gradient(circle at 20% 10%, var(--marca-luz) 0%, var(--marca) 40%, var(--marca-escuro) 85%, #1B1430 100%)" }}
           >
             <div aria-hidden="true" className="absolute inset-0" style={{ background: "repeating-linear-gradient(125deg, rgba(255,255,255,0.05) 0 2px, transparent 2px 40px)" }} />
             <div className="relative flex flex-col">

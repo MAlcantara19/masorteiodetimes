@@ -13,6 +13,8 @@ export default function manifest(): MetadataRoute.Manifest {
     background_color: "#1B1430",
     theme_color: "#1B1430",
     lang: "pt-BR",
+    // No Android, com o app instalado: Zap → segurar a lista → Compartilhar → MA Sorteio.
+    share_target: { action: "/compartilhar", method: "GET", params: { title: "title", text: "text", url: "url" } },
     icons: [
       { src: "/icons/192.png", sizes: "192x192", type: "image/png" },
       { src: "/icons/512.png", sizes: "512x512", type: "image/png" },

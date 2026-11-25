@@ -24,6 +24,7 @@ import {
   type Pausa,
 } from "@/lib/partida";
 import { avisarPush } from "@/lib/push-cliente";
+import { linkZap, textoDoDia, textoDoJogo } from "@/lib/resumo-zap";
 import Folha from "./Folha";
 import Icone from "./Icone";
 import { Carregando } from "./Topo";
@@ -71,6 +72,7 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
   const [aba, setAba] = useState<"lances" | "artilharia">("lances");
   const [formPin, setFormPin] = useState({ pin: "", nome: "" });
   const [ocupado, setOcupado] = useState(false);
+  const [zapJogo, setZapJogo] = useState<string | null>(null); // jogo que acabou de encerrar (pra mandar no grupo)
   const vibrou = useRef<string | null>(null);
   const ultimaAcao = useRef<{ chave: string; em: number }>({ chave: "", em: 0 });
 
@@ -310,6 +312,7 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
     }
     setOcupado(true);
     await acao("encerrar");
+    setZapJogo(partida.id);
     if (vencedorPenaltis !== undefined) await acao("vencedor", { vencedor: vencedorPenaltis });
     // Calcula o próximo jogo com a partida já encerrada.
     const vencedor =
@@ -406,6 +409,27 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
     if (l.assist_id) gols.set(l.assist_id, { g: gols.get(l.assist_id)?.g ?? 0, a: (gols.get(l.assist_id)?.a ?? 0) + 1 });
   }
   const artilharia = [...gols.entries()].sort((x, y) => y[1].g - x[1].g || y[1].a - x[1].a).slice(0, 10);
+
+  // Mensagens prontas pro grupo do Zap
+  const linkAoVivo = `${typeof window !== "undefined" ? window.location.origin : ""}/p/${pelada.slug}/ao-vivo`;
+  const proximoDe = (p: Partida): [number, number] | null => {
+    if (p.id === partida.id) return fila.proximo;
+    const seguinte = dados.partidas.find((x) => x.numero === p.numero + 1);
+    return seguinte ? [seguinte.time_a, seguinte.time_b] : null;
+  };
+  const zapDoJogo = (p: Partida) =>
+    linkZap(
+      textoDoJogo({
+        pelada: pelada.nome,
+        partida: p,
+        partidas: dados.partidas.filter((x) => x.numero <= p.numero),
+        lances: dados.lances.filter((l) => dados.partidas.some((x) => x.id === l.partida_id && x.numero <= p.numero)),
+        nome,
+        proximo: proximoDe(p),
+        link: `${linkAoVivo}?jogo=${p.numero}`,
+      }),
+    );
+  const jogoRecente = zapJogo ? dados.partidas.find((p) => p.id === zapJogo && p.status === "encerrada") : null;
 
   // Jogadores que podem ter feito o gol: o time + quem completou (espera) + goleiro do time.
   function jogadoresDoTime(t: number, lado: "a" | "b") {
@@ -618,10 +642,37 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
         ))}
       </section>
 
+      {jogoRecente && (
+        <section className="flex items-center gap-3 rounded-2xl border-2 border-zap/40 bg-white p-3">
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-sm font-semibold">Jogo {jogoRecente.numero} encerrado</span>
+            <span className="truncate text-xs text-apagado">
+              {NOMES_TIMES[jogoRecente.time_a]} {jogoRecente.placar_a} × {jogoRecente.placar_b} {NOMES_TIMES[jogoRecente.time_b]} · manda o resultado pra galera
+            </span>
+          </span>
+          <a href={zapDoJogo(jogoRecente)} target="_blank" rel="noreferrer" onClick={() => setZapJogo(null)} className="flex h-10 shrink-0 items-center gap-1.5 rounded-xl bg-zap px-3 text-sm font-semibold text-white">
+            <Icone nome="zap" tamanho={16} /> Mandar no grupo
+          </a>
+          <button type="button" aria-label="Fechar" onClick={() => setZapJogo(null)} className="text-apagado">
+            <Icone nome="fechar" tamanho={16} />
+          </button>
+        </section>
+      )}
+
       {/* Placar do dia: vitórias de cada time e quem ganhou de quem */}
       {encerradas.length > 0 && (
         <section className="flex flex-col gap-2 rounded-2xl border border-borda bg-white p-4">
-          <span className="text-xs font-bold tracking-wider text-apagado">PLACAR DO DIA</span>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold tracking-wider text-apagado">PLACAR DO DIA</span>
+            <a
+              href={linkZap(textoDoDia({ pelada: pelada.nome, partidas: dados.partidas, lances: dados.lances, nome, link: `${linkAoVivo}?dia=${encerradas.length}` }))}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center gap-1 text-sm font-semibold text-zap"
+            >
+              <Icone nome="zap" tamanho={15} /> Mandar no grupo
+            </a>
+          </div>
           <div className="flex flex-wrap gap-2">
             {times.map((_, t) => {
               const jogos = encerradas.filter((p) => p.time_a === t || p.time_b === t);
@@ -640,11 +691,14 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
           </div>
           <div className="flex flex-col text-[13px]">
             {[...encerradas].reverse().map((p) => (
-              <span key={p.id} className="flex justify-between border-t border-borda py-1">
+              <span key={p.id} className="flex items-center justify-between gap-2 border-t border-borda py-1">
                 <span className="text-apagado">Jogo {p.numero}</span>
-                <span className="tabular-nums">
+                <span className="flex-1 text-right tabular-nums">
                   {NOMES_TIMES[p.time_a]} <strong>{p.placar_a} × {p.placar_b}</strong> {NOMES_TIMES[p.time_b]}
                 </span>
+                <a href={zapDoJogo(p)} target="_blank" rel="noreferrer" aria-label={`Mandar o jogo ${p.numero} no Zap`} className="text-zap">
+                  <Icone nome="zap" tamanho={15} />
+                </a>
               </span>
             ))}
           </div>

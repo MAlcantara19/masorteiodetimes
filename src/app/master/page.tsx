@@ -8,6 +8,89 @@ import { useSessao } from "@/lib/sessao";
 import { nomeCurto, type Pelada } from "@/lib/pelada";
 import Topo, { Carregando } from "@/components/Topo";
 import FormPelada from "@/components/FormPelada";
+import { PLANOS, RECURSOS, planoDe, temRecurso, type Plano, type Recurso } from "@/lib/planos";
+
+// Plano da pelada e chaves pra liberar/travar cada recurso (só o master mexe).
+function PlanoDaPelada({ pelada, aoSalvar }: { pelada: Pelada; aoSalvar: () => void }) {
+  const [erro, setErro] = useState<string | null>(null);
+  const semColuna = pelada.plano === undefined;
+  async function gravar(mud: Partial<Pick<Pelada, "plano" | "recursos" | "plano_ate">>) {
+    const { error } = await criarClienteSupabase().from("peladas").update(mud).eq("id", pelada.id);
+    if (error) return setErro("Rode no Supabase o SQL novo (supabase/migrations/0004) pra usar os planos.");
+    setErro(null);
+    aoSalvar();
+  }
+  const plano = planoDe(pelada);
+  const exc = pelada.recursos ?? {};
+  function alternar(r: Recurso) {
+    const ligado = temRecurso(pelada, r);
+    const doPlano = PLANOS[plano].recursos.includes(r);
+    const n = { ...exc };
+    if (!ligado === doPlano) delete n[r];
+    else n[r] = !ligado;
+    gravar({ recursos: n });
+  }
+  return (
+    <section className="flex flex-col gap-3 rounded-2xl border border-borda bg-white p-4">
+      <div className="flex items-center justify-between">
+        <span className="font-semibold">Plano da {pelada.nome}</span>
+        <span className="rounded bg-noite px-2 py-0.5 text-[11px] font-bold text-roxo-claro">SÓ MASTER</span>
+      </div>
+      {semColuna && <p className="rounded-xl bg-alerta-suave px-3 py-2 text-sm text-alerta-escuro">Falta rodar o SQL 0004 no Supabase. Até lá, tudo fica liberado.</p>}
+      <div className="grid grid-cols-2 gap-2">
+        {(Object.keys(PLANOS) as Plano[]).map((k) => (
+          <button
+            key={k}
+            type="button"
+            disabled={semColuna}
+            onClick={() => gravar({ plano: k })}
+            className={`flex flex-col items-start rounded-xl border p-3 text-left ${plano === k ? "border-roxo bg-roxo-suave" : "border-borda"}`}
+          >
+            <span className="font-semibold">{PLANOS[k].nome}</span>
+            <span className="text-xs text-apagado">{PLANOS[k].preco}</span>
+          </button>
+        ))}
+      </div>
+      <label className="flex items-center justify-between gap-2 text-sm">
+        <span className="text-apagado">Completo vale até (vazio = sem data)</span>
+        <input
+          type="date"
+          disabled={semColuna}
+          value={pelada.plano_ate ?? ""}
+          onChange={(e) => gravar({ plano_ate: e.target.value || null })}
+          className="h-10 rounded-lg border border-borda px-2"
+        />
+      </label>
+      <div className="flex flex-col">
+        <span className="pb-1 text-[13px] font-semibold">Recursos (toque pra liberar ou travar só nesta pelada)</span>
+        {RECURSOS.map((r) => {
+          const on = temRecurso(pelada, r.id);
+          const mexido = typeof exc[r.id] === "boolean";
+          return (
+            <button key={r.id} type="button" disabled={semColuna} onClick={() => alternar(r.id)} className="flex items-center gap-3 border-t border-borda py-2 text-left">
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-sm font-semibold">
+                  {r.titulo}
+                  {mexido && <span className="font-normal text-apagado"> · exceção</span>}
+                </span>
+                <span className="text-xs text-apagado">{r.sub}</span>
+              </span>
+              <span className={`flex h-6 w-11 shrink-0 items-center rounded-full p-0.5 transition ${on ? "bg-roxo" : "bg-borda"}`} aria-hidden="true">
+                <span className={`h-5 w-5 rounded-full bg-white shadow transition ${on ? "translate-x-5" : ""}`} />
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {Object.keys(exc).length > 0 && (
+        <button type="button" onClick={() => gravar({ recursos: {} })} className="self-start text-xs font-semibold text-apagado underline">
+          Voltar tudo pro padrão do plano
+        </button>
+      )}
+      {erro && <p className="rounded-xl bg-alerta-suave px-3 py-2 text-sm text-alerta-escuro">{erro}</p>}
+    </section>
+  );
+}
 
 type PerfilLinha = { id: string; nome: string; apelido: string | null; email: string | null; is_master: boolean };
 type MembroLinha = { id: string; nome: string; apelido: string | null; papel: string; profile_id: string | null };
@@ -272,6 +355,8 @@ export default function MasterPage() {
             )}
             {aviso && <p className="rounded-xl bg-alerta-suave px-3 py-2 text-sm text-alerta-escuro">{aviso}</p>}
           </section>
+
+          <PlanoDaPelada pelada={pelada} aoSalvar={() => { carregarPeladas(); recarregarSessao(); }} />
 
           <section className="flex flex-col gap-3 rounded-2xl border border-borda bg-white p-4">
             <span className="font-semibold">Entraram com Google</span>

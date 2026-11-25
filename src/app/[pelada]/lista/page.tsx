@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { useSessao } from "@/lib/sessao";
 import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
-import { casarComElenco, lerLista, type ListaLida } from "@/lib/lista";
+import { CHAVE_LISTA, casarComElenco, lerLista, type ListaLida } from "@/lib/lista";
 import { deDataBr, isoDia, proximaPelada, curtaDia } from "@/lib/datas";
 import { eventoAtual } from "@/lib/evento";
 import Topo, { Carregando } from "@/components/Topo";
@@ -25,6 +25,33 @@ export default function ListaPage() {
   const [itens, setItens] = useState<Item[]>([]);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [veioDoZap, setVeioDoZap] = useState(false);
+
+  // Lista mandada pelo "Compartilhar" do WhatsApp (tela /compartilhar).
+  useEffect(() => {
+    try {
+      const t = window.sessionStorage.getItem(CHAVE_LISTA);
+      if (t) {
+        window.sessionStorage.removeItem(CHAVE_LISTA);
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setTexto(t);
+        setVeioDoZap(true);
+      }
+    } catch {}
+  }, []);
+
+  async function colar() {
+    try {
+      const t = await navigator.clipboard.readText();
+      if (t.trim()) {
+        setTexto(t);
+        setLida(null);
+        setItens([]);
+      }
+    } catch {
+      setErro("O navegador não deixou colar sozinho. Segure dentro da caixa e toque em Colar.");
+    }
+  }
 
   useEffect(() => {
     if (!pelada || !admin) return;
@@ -126,12 +153,17 @@ export default function ListaPage() {
           <label htmlFor="lista" className="text-xs font-bold uppercase tracking-wider text-apagado">
             Mensagem colada
           </label>
-          {texto && (
-            <button type="button" onClick={() => { setTexto(""); setLida(null); setItens([]); }} className="text-sm font-semibold text-roxo">
+          {texto ? (
+            <button type="button" onClick={() => { setTexto(""); setLida(null); setItens([]); setVeioDoZap(false); }} className="text-sm font-semibold text-roxo">
               Limpar
+            </button>
+          ) : (
+            <button type="button" onClick={colar} className="text-sm font-semibold text-roxo">
+              Colar do Zap
             </button>
           )}
         </div>
+        {veioDoZap && !lida && <span className="rounded-xl bg-roxo-suave px-3 py-2 text-[13px] text-roxo-escuro">Lista recebida do WhatsApp. Confere e toque em “Ler lista”.</span>}
         <textarea
           id="lista"
           rows={lida ? 4 : 10}

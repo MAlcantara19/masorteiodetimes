@@ -27,6 +27,12 @@ export type PeladaResumo = {
   local: string | null;
   logo_url: string | null;
   lembrete_horas_antes: number;
+  cor_banner?: string | null;
+  cor_secundaria?: string | null; // (SQL 0004)
+  camisa_estilo?: string | null;
+  plano?: string | null;
+  recursos?: Record<string, boolean> | null;
+  plano_ate?: string | null;
 };
 
 export type Vinculo = { membro_id: string; papel: "admin" | "jogador"; pelada: PeladaResumo };
@@ -46,7 +52,8 @@ type Sessao = {
 
 const Contexto = createContext<Sessao | null>(null);
 
-const CAMPOS_PELADA = "id, nome, slug, dia_semana, horario, horario_fim, local, logo_url, lembrete_horas_antes";
+// "*" pra funcionar antes e depois dos SQLs novos (colunas de cor e plano).
+const CAMPOS_PELADA = "*";
 
 export function SessaoProvider({ children }: { children: ReactNode }) {
   const [carregando, setCarregando] = useState(true);

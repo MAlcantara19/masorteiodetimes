@@ -10,10 +10,12 @@ import { DIAS, horaCurta, inicioMes, isoDia, nomeMes } from "@/lib/datas";
 import { textoRegra } from "@/lib/partida";
 import { Carregando } from "@/components/Topo";
 import Capa from "@/components/Capa";
+import Camisa, { siglaDe } from "@/components/Camisa";
+import { temRecurso } from "@/lib/planos";
 
 export default function PaginaPublica() {
   const { pelada, slug, naoAchou } = usePelada();
-  const { usuario, ehAdmin } = useSessao();
+  const { usuario, perfil, ehAdmin } = useSessao();
   const admin = !!usuario && !!pelada && ehAdmin(pelada.id);
   const [d, setD] = useState<DadosPeriodo | null>(null);
   const [elenco, setElenco] = useState<Membro[]>([]);
@@ -108,6 +110,22 @@ export default function PaginaPublica() {
           Fotos
         </Link>
       </div>
+
+      {pelada.camisa_estilo && temRecurso(pelada, "cores") && (
+        <section className="flex flex-col items-center gap-2 rounded-2xl border border-borda bg-white p-4">
+          <span className="self-start text-xs font-bold tracking-wider text-apagado">A CAMISA DA {pelada.nome.toUpperCase()}</span>
+          <div className="flex justify-center gap-2">
+            <Camisa cor={pelada.cor_banner || "#7444D6"} cor2={pelada.cor_secundaria || "#FFFFFF"} estilo={pelada.camisa_estilo} logo={pelada.logo_url} sigla={siglaDe(pelada.nome)} largura={130} />
+            <Camisa
+              cor={pelada.cor_banner || "#7444D6"}
+              cor2={pelada.cor_secundaria || "#FFFFFF"}
+              estilo={pelada.camisa_estilo}
+              costas={{ nome: perfil?.apelido || perfil?.nome?.split(" ")[0] || "Craque", numero: 10 }}
+              largura={130}
+            />
+          </div>
+        </section>
+      )}
 
       {admin && convite && (
         <section className="flex flex-col items-center gap-3 rounded-2xl border border-borda bg-white p-4 text-center">

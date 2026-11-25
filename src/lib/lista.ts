@@ -121,3 +121,6 @@ export function casarComElenco<T extends ComNomes>(nomes: string[], elenco: T[])
     return { tipo: "novo", nome };
   });
 }
+
+// Onde a tela /compartilhar guarda a lista que veio do Zap até a tela "Colar lista" abrir.
+export const CHAVE_LISTA = "masorteio:lista-compartilhada";
