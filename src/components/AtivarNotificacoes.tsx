@@ -57,8 +57,8 @@ export default function AtivarNotificacoes() {
       <span className="flex flex-1 flex-col text-sm">
         <span className="font-semibold">Notificações</span>
         <span className="text-[13px] text-apagado">
-          {estado === "ativo" && "Ligadas neste aparelho: lembretes, pelada começou, votação e medalhas."}
-          {estado === "inativo" && "Lembrete de sortear, a pelada começou, votação aberta e medalha nova."}
+          {estado === "ativo" && "Ligadas neste aparelho: hoje tem pelada, 2 horas antes, lista abriu, avisos, votação e medalhas."}
+          {estado === "inativo" && "Receba: hoje tem pelada, 2 horas antes, a lista abriu, avisos do admin, votação e medalha nova."}
           {estado === "bloqueado" && "Bloqueadas no navegador. Libere nas configurações do site."}
           {estado === "sem-suporte" && "No iPhone, instale o app na tela inicial primeiro (iOS 16.4 ou mais novo)."}
         </span>

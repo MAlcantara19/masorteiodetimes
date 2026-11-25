@@ -10,6 +10,8 @@ import { NOMES_TIMES } from "@/lib/evento";
 import { curtaDia, inicioMes, isoDia, nomeMes } from "@/lib/datas";
 import { Escolha, Interruptor } from "@/components/Folha";
 import Topo, { Carregando } from "@/components/Topo";
+import { useContatos } from "@/lib/contatos";
+import { linkZapPara } from "@/lib/whatsapp";
 
 type Avaliacao = {
   evento_id: string;
@@ -35,6 +37,7 @@ export default function GestaoPage() {
   const [avisaram, setAvisaram] = useState<Set<string>>(new Set());
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
   const [copiado, setCopiado] = useState(false);
+  const contatos = useContatos(pelada?.id, admin);
 
   const { mesRef, mesIni, mesFim } = useMemo(() => {
     const ref = new Date();
@@ -192,6 +195,20 @@ export default function GestaoPage() {
               <div key={m.id} className="flex items-center justify-between border-b border-borda py-2.5 text-sm last:border-0">
                 <span className="font-semibold">{nomeCurto(m)}</span>
                 <span className="flex items-center gap-2">
+                  {!pagos.has(m.id) && contatos.get(m.id)?.whatsapp && (
+                    <a
+                      href={linkZapPara(
+                        contatos.get(m.id)!.whatsapp as string,
+                        `Fala, ${nomeCurto(m)}! ⚽ Tá faltando a mensalidade de ${nomeMes(mesRef).toLowerCase()} da ${pelada.nome}${valor ? ` (${fmt(valor)})` : ""}.${pelada.pix_chave && typeof window !== "undefined" ? ` Paga pelo Pix aqui: ${window.location.origin}/${slug}/pagar` : ""} Valeu!`,
+                      )}
+                      target="_blank"
+                      rel="noreferrer"
+                      aria-label={`Cobrar ${nomeCurto(m)} no WhatsApp`}
+                      className="rounded-full bg-zap px-2 py-0.5 text-[11px] font-bold text-white"
+                    >
+                      Zap
+                    </a>
+                  )}
                   <span className={`text-xs font-bold ${pagos.has(m.id) ? "text-zap" : avisaram.has(m.id) ? "text-roxo" : "text-alerta"}`}>
                     {pagos.has(m.id) ? "PAGO" : avisaram.has(m.id) ? "AVISOU QUE PAGOU" : "DEVENDO"}
                   </span>

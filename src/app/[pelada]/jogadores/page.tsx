@@ -22,6 +22,8 @@ import Folha, { Escolha, Interruptor } from "@/components/Folha";
 import Icone from "@/components/Icone";
 import Topo, { Carregando } from "@/components/Topo";
 import { ehReserva } from "@/lib/montar-sorteio";
+import { NIVEL_TXT, NOME_PE, NOME_POSICAO, useContatos } from "@/lib/contatos";
+import { formatarZap, linkZapPara } from "@/lib/whatsapp";
 
 const CURTO: Record<string, string> = {
   "0.5": "Começando", "1": "Muito fraco", "1.5": "Ruim", "2": "Básico", "2.5": "Abaixo da média",
@@ -65,6 +67,7 @@ export default function JogadoresPage() {
   const [salvando, setSalvando] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [juntarCom, setJuntarCom] = useState("");
+  const contatos = useContatos(pelada?.id, admin);
   const [temLocal, setTemLocal] = useState(0);
 
   const recarregar = useCallback(async () => {
@@ -389,6 +392,34 @@ export default function JogadoresPage() {
                 className="h-11 rounded-xl border border-borda px-3 text-[15px] font-normal"
               />
             </label>
+
+            {edit.id && contatos.get(edit.id) && (() => {
+              const c = contatos.get(edit.id as string)!;
+              return (
+                <div className="flex flex-col gap-1 rounded-xl border border-roxo/30 bg-roxo-suave/40 px-3 py-2 text-[13px]">
+                  <span className="font-semibold">O que ele colocou no perfil (só admin vê)</span>
+                  {c.whatsapp && (
+                    <span className="flex items-center justify-between gap-2">
+                      📱 {formatarZap(c.whatsapp)}
+                      <a href={linkZapPara(c.whatsapp, `Fala, ${edit.apelido || edit.nome}! `)} target="_blank" rel="noreferrer" className="rounded-full bg-zap px-3 py-1 text-xs font-bold text-white">
+                        Chamar no Zap
+                      </a>
+                    </span>
+                  )}
+                  {c.nascimento && <span>🎂 {c.nascimento.split("-").reverse().join("/")}</span>}
+                  {(c.posicao || c.pe) && (
+                    <span>
+                      ⚽ Gosta de jogar: {[c.posicao ? NOME_POSICAO[c.posicao] : null, c.pe ? NOME_PE[c.pe] : null].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
+                  {c.autoavaliacao ? (
+                    <span>
+                      ⭐ Se avaliou: {"★".repeat(c.autoavaliacao)} ({NIVEL_TXT[c.autoavaliacao]})
+                    </span>
+                  ) : null}
+                </div>
+              );
+            })()}
 
             {edit.id && edit.profile_id && (
               <div className="flex items-center justify-between gap-2 rounded-xl bg-fundo px-3 py-2 text-[13px]">

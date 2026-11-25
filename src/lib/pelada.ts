@@ -32,6 +32,10 @@ export type Pelada = {
   lista_goleiros?: number;
   lista_abre_dia?: number | null;
   lista_abre_hora?: string | null;
+  publica?: boolean; // (SQL 0009) aparece em "Achar pelada"
+  contato_whatsapp?: string | null;
+  aviso_dia?: boolean;
+  aviso_2h?: boolean;
   cor_secundaria?: string | null; // (SQL 0004)
   camisa_estilo?: string | null;
   plano?: string | null;
@@ -104,7 +108,7 @@ export function nomeCurto(m: { nome: string; apelido?: string | null }): string 
   return m.apelido?.trim() || m.nome;
 }
 
-export const SLUGS_RESERVADOS = ["mais", "entrar", "perfil", "master", "p", "auth", "api", "acompanhar", "sortear", "privacidade", "telao", "compartilhar", "cronometro", "tour", "marca", "icons"];
+export const SLUGS_RESERVADOS = ["mais", "peladas", "entrar", "perfil", "master", "p", "auth", "api", "acompanhar", "sortear", "privacidade", "telao", "compartilhar", "cronometro", "tour", "marca", "icons"];
 
 export function criarSlug(nome: string): string {
   return nome

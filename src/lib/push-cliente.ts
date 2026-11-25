@@ -3,8 +3,10 @@
 // Se as notificações ainda não estiverem configuradas, simplesmente não faz nada.
 export type AvisoPush = {
   pelada_id: string;
-  tipo: "comecou" | "votacao" | "medalha";
+  tipo: "comecou" | "votacao" | "medalha" | "aviso";
   membros?: string[];
+  titulo?: string; // tipo "aviso": o que o admin escreveu
+  texto?: string;
 };
 
 export function avisarPush(aviso: AvisoPush) {

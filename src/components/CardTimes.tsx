@@ -43,7 +43,7 @@ const CardTimes = forwardRef<HTMLDivElement, Props>(function CardTimes(
 ) {
   const colunas = formato === "vertical" ? 1 : times.length === 3 ? 3 : 2;
   return (
-    <div ref={ref} className={`flex flex-col gap-3 rounded-2xl p-4 ${escuro ? "bg-noite text-white" : "bg-white text-tinta"}`}>
+    <div ref={ref} className={`flex flex-col gap-3 rounded-2xl p-4 ${escuro ? "bg-noite text-white" : "tema-claro bg-white text-tinta"}`}>
       <div className="flex items-baseline justify-between gap-2">
         <span className="font-display text-xl font-bold">{pelada}</span>
         <span className={`text-sm font-semibold ${escuro ? "text-[#B9AFCB]" : "text-apagado"}`}>{subtitulo}</span>

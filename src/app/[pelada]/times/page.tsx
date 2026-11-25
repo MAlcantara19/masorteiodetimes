@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toPng } from "html-to-image";
+import { comTemaClaro } from "@/lib/imagem";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { useSessao } from "@/lib/sessao";
 import { carregarElenco, nomeCurto, notaDoMembro, usePelada, type Membro } from "@/lib/pelada";
@@ -319,7 +320,7 @@ export default function TimesPage() {
   }
 
   async function gerarPng(el: HTMLElement) {
-    return toPng(el, { pixelRatio: 3, backgroundColor: escuro ? "#1B1430" : "#ffffff" });
+    return comTemaClaro(() => toPng(el, { pixelRatio: 3, backgroundColor: escuro ? "#1B1430" : "#ffffff" }));
   }
 
   function baixar(url: string, n: number) {

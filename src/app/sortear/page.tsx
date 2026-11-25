@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { toPng } from "html-to-image";
+import { comTemaClaro } from "@/lib/imagem";
 import Estrelas from "@/components/Estrelas";
 import { casarComElenco, lerLista, type ListaLida } from "@/lib/lista";
 import { carregarElenco, formatarNota, NIVEIS, novoId, POSICOES, salvarElenco, type Jogador } from "@/lib/elenco";
@@ -212,7 +213,8 @@ export default function SortearPage() {
     setCapturando(true); // esconde notas e seleção antes de gerar a imagem
     await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     try {
-      const url = await toPng(cardRef.current, { pixelRatio: 2, backgroundColor: escuro ? "#17121F" : "#ffffff" });
+      const el = cardRef.current;
+      const url = await comTemaClaro(() => toPng(el, { pixelRatio: 2, backgroundColor: escuro ? "#17121F" : "#ffffff" }));
       const a = document.createElement("a");
       a.href = url;
       a.download = `${PELADA.toLowerCase().replace(/\s+/g, "-")}-sorteio-${atual + 1}.png`;

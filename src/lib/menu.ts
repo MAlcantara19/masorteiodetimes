@@ -18,6 +18,7 @@ export function montarMenu(atual: PeladaResumo | null, admin: boolean, ehMaster:
     jogador.push(
       { id: "jogo", href: `${b}/jogo`, titulo: "Partida", sub: "cronômetro e placar ao vivo", icone: "partida" },
       ...(atual.lista_app ? [{ id: "listaapp", href: `/p/${atual.slug}/lista`, titulo: "Lista da semana", sub: "põe ou tira seu nome", icone: "lista" as const }] : []),
+      { id: "avisos", href: `${b}/avisos`, titulo: "Avisos", sub: "recados do admin e lembretes", icone: "estrela" },
       { id: "aovivo", href: `/p/${atual.slug}/ao-vivo`, titulo: "Link ao vivo", sub: "placar e artilharia pra todos", icone: "link" },
       { id: "telao", href: `/p/${atual.slug}/telao`, titulo: "Telão", sub: "placar gigante na TV da quadra", icone: "tela" },
       { id: "campeonato", href: `${b}/campeonato`, titulo: "Campeonato", sub: "melhores da semana e do mês", icone: "trofeu" },
@@ -59,6 +60,7 @@ export function montarMenu(atual: PeladaResumo | null, admin: boolean, ehMaster:
     { id: "card", href: "/perfil/card", titulo: "Meu card", sub: "sua carta e raridade", icone: "cartao" },
     { id: "perfil", href: "/perfil", titulo: "Meu perfil", sub: "nome, apelido e foto", icone: "usuario" },
     { id: "cronometro", href: "/cronometro", titulo: "Cronômetro simples", sub: "sem internet, só neste aparelho", icone: "partida" },
+    { id: "achar", href: "/peladas", titulo: "Achar pelada", sub: "peladas abertas, horários e contato", icone: "busca" },
     { id: "acompanhar", href: "/acompanhar", titulo: "Acompanhar outras peladas", sub: "ao vivo de qualquer pelada", icone: "link" },
     { id: "tour", href: "/tour", titulo: "Tour do app", sub: "tudo que o app faz, passo a passo", icone: "estrela" },
   ];

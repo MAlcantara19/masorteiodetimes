@@ -118,8 +118,11 @@ export default function Inicio() {
               .
             </span>
           ) : (
-            <span>Peça o link de convite pro admin da sua pelada, ou peça pra ele te adicionar pelo seu e-mail ({perfil?.email}).</span>
+            <span>Abra o link da lista que o admin mandou no grupo e toque no seu nome, ou peça o link de convite. Ele também pode te adicionar pelo seu e-mail ({perfil?.email}).</span>
           )}
+          <Link href="/peladas" className="mt-1 flex h-11 items-center justify-center rounded-xl border-2 border-roxo font-semibold text-roxo">
+            Achar uma pelada pra jogar
+          </Link>
         </section>
       )}
 

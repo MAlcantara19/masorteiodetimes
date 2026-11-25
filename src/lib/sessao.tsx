@@ -16,6 +16,11 @@ export type Perfil = {
   cor_card: string | null;
   estilo_card?: string | null;
   numero_camisa?: number | null; // SQL 0005
+  whatsapp?: string | null; // SQL 0009: só números, 55 + DDD
+  nascimento?: string | null;
+  posicao?: string | null; // D, M, A, Q ou G
+  pe?: string | null;
+  autoavaliacao?: number | null; // 1 a 5, só admin vê
 };
 
 export type PeladaResumo = {

@@ -9,6 +9,8 @@ import GuardaPerfil from "@/components/GuardaPerfil";
 import RetornoLogin from "@/components/RetornoLogin";
 import RegistrarSW from "@/components/RegistrarSW";
 import TemaPelada from "@/components/TemaPelada";
+import TemaNoturno from "@/components/TemaNoturno";
+import { SCRIPT_TEMA } from "@/lib/tema";
 import "./globals.css";
 
 const inter = Inter({ variable: "--font-inter", subsets: ["latin"] });
@@ -30,13 +32,18 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="pt-BR" className={`${inter.variable} ${grotesk.variable} h-full antialiased`}>
+    <html lang="pt-BR" className={`${inter.variable} ${grotesk.variable} h-full antialiased`} suppressHydrationWarning>
+      <head>
+        {/* Modo noturno antes de a página aparecer (sem piscar). */}
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+      </head>
       <body className="min-h-full font-sans">
         <SessaoProvider>
           <Suspense fallback={null}>
             <GuardaPerfil />
             <RetornoLogin />
             <TemaPelada />
+            <TemaNoturno />
           </Suspense>
           {children}
           <Suspense fallback={null}>

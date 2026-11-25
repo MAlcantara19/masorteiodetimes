@@ -10,6 +10,8 @@ import { nomeCurto, usePelada, type Membro, elencoRapido } from "@/lib/pelada";
 import { curtaDia, inicioMes, isoDia, nomeMes } from "@/lib/datas";
 import { gerarPix } from "@/lib/pix";
 import { linkZap } from "@/lib/resumo-zap";
+import { useContatos } from "@/lib/contatos";
+import { linkZapPara } from "@/lib/whatsapp";
 import { Escolha } from "@/components/Folha";
 import Topo, { Carregando } from "@/components/Topo";
 
@@ -51,6 +53,7 @@ export default function CobrarPage() {
   const [pessoa, setPessoa] = useState("");
   const [listarNomes, setListarNomes] = useState(true);
   const mes = inicioMes();
+  const contatos = useContatos(pelada?.id, admin);
 
   useEffect(() => {
     if (!pelada || !admin) return;
@@ -207,8 +210,13 @@ export default function CobrarPage() {
         <pre className="max-h-72 overflow-auto rounded-xl bg-fundo p-3 font-sans text-[13px] whitespace-pre-wrap break-all">{mensagem}</pre>
         <div className="grid grid-cols-2 gap-2">
           <BotaoCopiar texto={mensagem} rotulo="Copiar mensagem" className="h-12 rounded-xl border-2 border-zap font-semibold text-zap" />
-          <a href={linkZap(mensagem)} target="_blank" rel="noreferrer" className="flex h-12 items-center justify-center rounded-xl bg-zap font-semibold text-white">
-            Mandar no Zap
+          <a
+            href={pra === "pessoa" && pessoa && contatos.get(pessoa)?.whatsapp ? linkZapPara(contatos.get(pessoa)!.whatsapp as string, mensagem) : linkZap(mensagem)}
+            target="_blank"
+            rel="noreferrer"
+            className="flex h-12 items-center justify-center rounded-xl bg-zap text-center text-sm font-semibold text-white"
+          >
+            {pra === "pessoa" && pessoa && contatos.get(pessoa)?.whatsapp ? "Mandar direto pra ele" : "Mandar no Zap"}
           </a>
         </div>
         {temPix && <BotaoCopiar texto={codigo} rotulo="Copiar só o Pix copia e cola" className="h-10 rounded-xl border border-borda text-sm font-semibold" />}

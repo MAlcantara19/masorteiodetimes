@@ -1,6 +1,8 @@
 // Lembretes automáticos. Um agendador (GitHub Actions, de hora em hora) chama esta rota com o CRON_SECRET.
 // - "Ainda não sorteou": X horas antes da pelada (lembrete_horas_antes), pros admins.
 // - "Amanhã tem pelada": no dia anterior, às 10h, pros admins colarem a lista.
+// - Pra galera (SQL 0009): no dia da pelada às 7h "hoje tem pelada" e 2 horas antes "daqui a 2 horas"
+//   (vai pra quem está na lista; sem lista, pra todo mundo da pelada). Cada aviso também fica na tela Avisos.
 // - Lista no app (SQL 0007): 1 hora antes de abrir, lança a lista (com os mensalistas) e avisa "abre às 12:00";
 //   na hora de abrir, avisa "a lista abriu". A lista abre na hora certa mesmo se o aviso atrasar.
 import { NextResponse, type NextRequest } from "next/server";
@@ -38,6 +40,35 @@ export async function GET(request: NextRequest) {
     .not("lista_abre_dia", "is", null)
     .not("dia_semana", "is", null);
   const agoraMs = Date.now();
+
+  // Guarda o aviso na tela Avisos da pelada (sem o SQL 0009, só não guarda).
+  const registrar = async (peladaId: string, titulo: string, texto: string, link: string) => {
+    await admin.from("avisos").insert({ pelada_id: peladaId, titulo, texto, link, automatico: true, criado_por: null });
+  };
+
+  // Lembretes pra galera.
+  const { data: comAviso } = await admin.from("peladas").select("id, nome, slug, dia_semana, horario, local, aviso_dia, aviso_2h").not("dia_semana", "is", null);
+  for (const p of comAviso ?? []) {
+    if (sp.dia !== p.dia_semana || !p.horario) continue;
+    const [h, m] = String(p.horario).split(":").map(Number);
+    const hhmm = `${String(h).padStart(2, "0")}:${String(m || 0).padStart(2, "0")}`;
+    const manha = p.aviso_dia && sp.hora === 7 && h > 9;
+    const duasHoras = p.aviso_2h && sp.hora === h - 2;
+    if (!manha && !duasHoras) continue;
+    // Quem está na lista de hoje (se tiver lista); senão todo mundo.
+    const { data: ev } = await admin.from("eventos").select("id").eq("pelada_id", p.id).eq("data", sp.data).neq("status", "cancelado").maybeSingle();
+    let membros: string[] | undefined;
+    if (ev) {
+      const { data: pr } = await admin.from("presencas").select("membro_id").eq("evento_id", ev.id).eq("status", "confirmado");
+      if (pr?.length) membros = pr.map((x) => x.membro_id as string);
+    }
+    const ids = await perfisDaPelada(p.id, membros ? { membros } : {});
+    const titulo = manha ? `⚽ Hoje tem ${p.nome}!` : `⏰ ${p.nome} daqui a 2 horas`;
+    const texto = manha ? `Às ${hhmm}${p.local ? ` · ${p.local}` : ""}. Bora!` : `Começa às ${hhmm}${p.local ? ` · ${p.local}` : ""}. Separa a chuteira!`;
+    const n = await enviarPara(ids, { titulo, corpo: texto, url: `/p/${p.slug}/ao-vivo`, tag: `lembrete-${p.id}` }, origem);
+    await registrar(p.id, titulo, texto, `/p/${p.slug}/ao-vivo`);
+    log.push(`${p.nome}: ${manha ? "hoje tem" : "2h antes"} (${n})`);
+  }
   for (const p of comLista ?? []) {
     const data = proximoDiaDaPelada(p, sp.data, sp.hora);
     const abre = data ? aberturaDaLista(p, data) : null;
@@ -49,6 +80,7 @@ export async function GET(request: NextRequest) {
       await lancarLista(admin, p, data, abre);
       const ids = await perfisDaPelada(p.id);
       const n = await enviarPara(ids, { titulo: `📋 Lista da ${p.nome}`, corpo: `A lista abre hoje às ${hhmm}. Fica ligado!`, url: `/p/${p.slug}/lista`, tag: `listaapp-${p.id}` }, origem);
+      await registrar(p.id, `📋 A lista abre hoje às ${hhmm}`, "Mensalistas já estão na lista.", `/p/${p.slug}/lista`);
       log.push(`${p.nome}: lista abre às ${hhmm} (${n})`);
     }
     // Acabou de abrir (na rodada seguinte ao horário).
@@ -56,6 +88,7 @@ export async function GET(request: NextRequest) {
       const r = await lancarLista(admin, p, data, abre);
       const ids = await perfisDaPelada(p.id);
       const n = await enviarPara(ids, { titulo: `✅ A lista da ${p.nome} abriu!`, corpo: "Corre pra pôr seu nome.", url: `/p/${p.slug}/lista`, tag: `listaapp-${p.id}` }, origem);
+      await registrar(p.id, "✅ A lista abriu!", "Corre pra pôr seu nome.", `/p/${p.slug}/lista`);
       log.push(`${p.nome}: lista abriu (${n})${r?.nova ? " · lançada agora" : ""}`);
     }
   }
