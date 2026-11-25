@@ -90,6 +90,7 @@ function ConfigPix({ pelada, aoSalvar }: { pelada: Pelada; aoSalvar: () => void 
   const [chave, setChave] = useState(pelada.pix_chave ?? "");
   const [nome, setNome] = useState(pelada.pix_nome ?? "");
   const [cidade, setCidade] = useState(pelada.pix_cidade ?? "");
+  const [diaria, setDiaria] = useState(pelada.valor_diaria ? String(pelada.valor_diaria).replace(".", ",") : "");
   const [erro, setErro] = useState<string | null>(null);
   async function salvar() {
     const { error } = await criarClienteSupabase()
@@ -97,13 +98,18 @@ function ConfigPix({ pelada, aoSalvar }: { pelada: Pelada; aoSalvar: () => void 
       .update({ pix_chave: chave.trim() || null, pix_nome: nome.trim() || null, pix_cidade: cidade.trim() || null })
       .eq("id", pelada.id);
     if (error) return setErro("Pra salvar o Pix, rode no Supabase o SQL novo (supabase/migrations/0003).");
+    const v = Number(diaria.replace(",", ".")) || null;
+    if (v !== (pelada.valor_diaria ? Number(pelada.valor_diaria) : null)) {
+      const r = await criarClienteSupabase().from("peladas").update({ valor_diaria: v }).eq("id", pelada.id);
+      if (r.error) return setErro("Pra salvar a diária, rode no Supabase o SQL novo (supabase/migrations/0006).");
+    }
     setErro(null);
     aoSalvar();
   }
   const campo = "h-11 rounded-xl border border-borda px-3 text-[15px] font-normal";
   return (
     <section className="flex flex-col gap-2 rounded-2xl border border-borda bg-white p-4">
-      <span className="font-semibold">Pix da mensalidade</span>
+      <span className="font-semibold">Pix da pelada</span>
       <label className="flex flex-col gap-1 text-[13px] font-semibold">
         Chave Pix (celular, e-mail, CPF ou aleatória)
         <input value={chave} onChange={(e) => setChave(e.target.value)} className={campo} placeholder="+5524999999999" />
@@ -118,7 +124,13 @@ function ConfigPix({ pelada, aoSalvar }: { pelada: Pelada; aoSalvar: () => void 
           <input value={cidade} onChange={(e) => setCidade(e.target.value)} className={campo} placeholder="Resende" />
         </label>
       </div>
-      <span className="text-xs text-apagado">Celular no formato +55 DDD número. A chave aparece pra galera da pelada na hora de pagar.</span>
+      <label className="flex flex-col gap-1 text-[13px] font-semibold">
+        Valor da diária (quem paga por pelada)
+        <input value={diaria} onChange={(e) => setDiaria(e.target.value)} inputMode="decimal" className={campo} placeholder="15" />
+      </label>
+      <span className="text-xs text-apagado">
+        Celular no formato +55 DDD número. A chave aparece pra galera da pelada na hora de pagar. A mensalidade fica em Dados da pelada{pelada.mensalidade ? ` (hoje R$ ${String(pelada.mensalidade).replace(".", ",")})` : ""}.
+      </span>
       {erro && <p className="rounded-xl bg-alerta-suave px-3 py-2 text-sm text-alerta-escuro">{erro}</p>}
       <button type="button" onClick={salvar} className="h-11 rounded-xl bg-roxo font-semibold text-white">
         Salvar Pix

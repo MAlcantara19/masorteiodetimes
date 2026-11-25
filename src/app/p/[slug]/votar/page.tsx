@@ -132,6 +132,7 @@ export default function VotarPage() {
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {opcoes
+                  .filter((id) => !/^RESERVA( \d+)?$/.test(nome(id)))
                   .map((id) => ({ id, votos: cont.find((c) => c.votado_id === id)?.votos ?? 0 }))
                   .sort((a, b) => (aberta ? nome(a.id).localeCompare(nome(b.id)) : b.votos - a.votos))
                   .map(({ id, votos }) => {

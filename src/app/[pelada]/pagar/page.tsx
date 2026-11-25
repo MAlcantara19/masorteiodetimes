@@ -1,6 +1,6 @@
 "use client";
 // Pagar a mensalidade com Pix: QR Code com o valor certo, copia e cola e o botão "Já paguei"
-// (o admin confere no banco e marca como pago na Gestão).
+// (o admin confere no banco e marca como pago na Gestão). Se a pelada tiver diária, dá pra pagar a diária também.
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { criarClienteSupabase } from "@/lib/supabase/client";
@@ -9,6 +9,7 @@ import { usePelada } from "@/lib/pelada";
 import { inicioMes } from "@/lib/datas";
 import { mesRotulo } from "@/lib/pix";
 import QrPix from "@/components/QrPix";
+import { Escolha } from "@/components/Folha";
 import Topo, { Carregando } from "@/components/Topo";
 
 type Pagamento = { pago: boolean; informado_em?: string | null };
@@ -19,6 +20,7 @@ export default function PagarPage() {
   const meuMembro = vinculos.find((v) => v.pelada.id === pelada?.id)?.membro_id ?? null;
   const [pg, setPg] = useState<Pagamento | null | undefined>(undefined);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [oQue, setOQue] = useState<"mensalidade" | "diaria">("mensalidade");
   const mes = inicioMes();
 
   const carregar = useCallback(async () => {
@@ -44,7 +46,9 @@ export default function PagarPage() {
   }
 
   const temPix = !!pelada.pix_chave;
-  const valor = pelada.mensalidade ? Number(pelada.mensalidade) : null;
+  const diaria = pelada.valor_diaria ? Number(pelada.valor_diaria) : null;
+  const ehDiaria = oQue === "diaria" && !!diaria;
+  const valor = ehDiaria ? diaria : pelada.mensalidade ? Number(pelada.mensalidade) : null;
 
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-6">
@@ -55,9 +59,21 @@ export default function PagarPage() {
         <p className="rounded-2xl bg-roxo-suave p-4 text-center text-sm font-semibold text-roxo-escuro">Você avisou que pagou. Falta o admin conferir.</p>
       )}
 
+      {temPix && diaria && (
+        <Escolha
+          rotulo="Pagar o quê"
+          valor={oQue}
+          aoMudar={setOQue}
+          opcoes={[
+            { valor: "mensalidade", rotulo: "Mensalidade" },
+            { valor: "diaria", rotulo: "Diária" },
+          ]}
+        />
+      )}
+
       {temPix ? (
         <section className="rounded-2xl border border-borda bg-white p-4">
-          <QrPix chave={pelada.pix_chave as string} nome={pelada.pix_nome || pelada.nome} cidade={pelada.pix_cidade || "BRASIL"} valor={valor} descricao={`${pelada.nome} ${mes.slice(0, 7)}`} />
+          <QrPix chave={pelada.pix_chave as string} nome={pelada.pix_nome || pelada.nome} cidade={pelada.pix_cidade || "BRASIL"} valor={valor} descricao={ehDiaria ? `${pelada.nome} diaria` : `${pelada.nome} ${mes.slice(0, 7)}`} />
         </section>
       ) : (
         <p className="rounded-2xl border border-borda bg-white p-4 text-sm text-apagado">
@@ -73,7 +89,7 @@ export default function PagarPage() {
         </p>
       )}
 
-      {usuario && meuMembro && !pg?.pago && (
+      {usuario && meuMembro && !pg?.pago && !ehDiaria && (
         <button type="button" onClick={jaPaguei} className="h-14 rounded-2xl bg-zap text-lg font-bold text-white">
           Já paguei
         </button>

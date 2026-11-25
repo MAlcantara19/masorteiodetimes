@@ -15,7 +15,11 @@ export type ConfigSorteio = {
   juntos: string[][]; // grupos de ids que jogam no mesmo time
   separar: [string, string][]; // pares de ids que não podem cair juntos
   equilibrarPosicoes: boolean;
+  // "Sorteio que aprende": duplas ("idA|idB", ordem alfabética) que jogaram juntas na última pelada.
+  evitar?: Set<string>;
 };
+
+export const chaveDupla = (a: string, b: string) => (a < b ? `${a}|${b}` : `${b}|${a}`);
 
 export type ResultadoSorteio = {
   times: JogadorSorteio[][];
@@ -79,6 +83,13 @@ export function sortear(jogadores: JogadorSorteio[], cfg: ConfigSorteio): Result
   }
 
   // 3. Busca local: troca 2 jogadores se melhorar o equilíbrio sem quebrar regra.
+  // Cada dupla repetida da semana passada pesa pouco: o equilíbrio continua mandando.
+  const repetidas = () => {
+    if (!cfg.evitar?.size) return 0;
+    let r = 0;
+    for (const t of T) for (let a = 0; a < t.length; a++) for (let b = a + 1; b < t.length; b++) if (cfg.evitar.has(chaveDupla(t[a].id, t[b].id))) r++;
+    return r;
+  };
   const custo = () => {
     const s = T.map(soma);
     let c = 2 * (Math.max(...s) - Math.min(...s));
@@ -86,9 +97,10 @@ export function sortear(jogadores: JogadorSorteio[], cfg: ConfigSorteio): Result
       const d = T.map(defensores);
       c += Math.max(...d) - Math.min(...d);
     }
-    return c;
+    return c + 0.1 * repetidas();
   };
-  for (let n = 0; n < 500 && T.length > 1; n++) {
+  const voltas = cfg.evitar?.size ? 1500 : 500;
+  for (let n = 0; n < voltas && T.length > 1; n++) {
     const i = Math.floor(Math.random() * T.length);
     const k = Math.floor(Math.random() * T.length);
     if (i === k || !T[i].length || !T[k].length) continue;

@@ -1,18 +1,19 @@
 "use client";
 // Colar a lista do WhatsApp: separa linha, goleiros e suplentes, confere nomes parecidos,
 // cadastra quem é novo (nota 3) e guarda o dia + a presença no banco.
+// Colar de novo: mostra quem entrou e quem saiu; quem sumiu da lista fica como "fora hoje".
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { useSessao } from "@/lib/sessao";
 import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
-import { CHAVE_LISTA, casarComElenco, lerLista, type ListaLida } from "@/lib/lista";
+import { CHAVE_LISTA, casarComElenco, lerLista, type ListaLida, type NomeLido } from "@/lib/lista";
 import { deDataBr, isoDia, proximaPelada, curtaDia } from "@/lib/datas";
-import { eventoAtual } from "@/lib/evento";
+import { carregarPresencas, eventoAtual, type Presenca } from "@/lib/evento";
 import Topo, { Carregando } from "@/components/Topo";
 
 type Secao = "linha" | "goleiros" | "suplentes";
-type Item = { secao: Secao; nome: string; membro: Membro | null; sugestao: Membro | null; opcoes?: Membro[]; decidido: boolean };
+type Item = { secao: Secao; nome: string; convidadoDe: string | null; membro: Membro | null; sugestao: Membro | null; opcoes?: Membro[]; decidido: boolean };
 
 export default function ListaPage() {
   const router = useRouter();
@@ -26,6 +27,8 @@ export default function ListaPage() {
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const [veioDoZap, setVeioDoZap] = useState(false);
+  // Presença que já estava salva pro mesmo dia (pra mostrar o que mudou).
+  const [anterior, setAnterior] = useState<{ eventoId: string; pres: Presenca[] } | null>(null);
 
   // Lista mandada pelo "Compartilhar" do WhatsApp (tela /compartilhar).
   useEffect(() => {
@@ -62,21 +65,33 @@ export default function ListaPage() {
 
   const ativos = useMemo(() => elenco.filter((m) => m.ativo), [elenco]);
 
-  function ler() {
+  function diaDa(l: ListaLida): string {
+    const proxima = pelada ? proximaPelada(pelada.dia_semana, pelada.horario) : null;
+    return (l.data && deDataBr(l.data)) || (proxima ? isoDia(proxima) : isoDia(new Date()));
+  }
+
+  async function ler() {
     const l = lerLista(texto);
     setLida(l);
-    const montar = (secao: Secao, nomes: string[]): Item[] =>
-      casarComElenco(nomes, ativos).map((c) =>
-        c.tipo === "exato"
-          ? { secao, nome: c.nome, membro: c.jogador, sugestao: null, decidido: true }
+    const montar = (secao: Secao, nomes: NomeLido[]): Item[] =>
+      casarComElenco(
+        nomes.map((x) => x.nome),
+        ativos,
+      ).map((c, k) => {
+        const convidadoDe = nomes[k].convidadoDe;
+        return c.tipo === "exato"
+          ? { secao, nome: c.nome, convidadoDe, membro: c.jogador, sugestao: null, decidido: true }
           : c.tipo === "ambiguo"
-            ? { secao, nome: c.nome, membro: null, sugestao: null, opcoes: c.opcoes, decidido: false }
+            ? { secao, nome: c.nome, convidadoDe, membro: null, sugestao: null, opcoes: c.opcoes, decidido: false }
             : c.tipo === "parecido"
-            ? { secao, nome: c.nome, membro: null, sugestao: c.jogador, decidido: false }
-            : { secao, nome: c.nome, membro: null, sugestao: null, decidido: true },
-      );
+              ? { secao, nome: c.nome, convidadoDe, membro: null, sugestao: c.jogador, decidido: false }
+              : { secao, nome: c.nome, convidadoDe, membro: null, sugestao: null, decidido: true };
+      });
     setItens([...montar("linha", l.linha), ...montar("goleiros", l.goleiros), ...montar("suplentes", l.suplentes)]);
     setErro(null);
+    if (!pelada) return;
+    const { data: ev } = await criarClienteSupabase().from("eventos").select("id").eq("pelada_id", pelada.id).eq("data", diaDa(l)).neq("status", "cancelado").maybeSingle();
+    setAnterior(ev ? { eventoId: ev.id, pres: await carregarPresencas(ev.id) } : null);
   }
 
   // Escolhe quem é (ou null = é outra pessoa, cadastra como novo).
@@ -88,6 +103,26 @@ export default function ListaPage() {
   const reconhecidos = itens.filter((x) => x.membro);
   const novos = itens.filter((x) => x.decidido && !x.membro);
   const conta = (s: Secao) => itens.filter((x) => x.secao === s).length;
+  // Quem riscou o nome ou escreveu "saí": só os que dá pra reconhecer com certeza.
+  const riscados = useMemo(
+    () =>
+      lida
+        ? casarComElenco(lida.riscados, ativos)
+            .map((c) => (c.tipo === "exato" ? c.jogador : null))
+            .filter((m): m is Membro => !!m)
+        : [],
+    [lida, ativos],
+  );
+  // O que mudou desde a última lista salva desse dia.
+  const nomeDoId = (id: string) => {
+    const m = elenco.find((x) => x.id === id);
+    return m ? nomeCurto(m) : "?";
+  };
+  const idsAgora = new Set(itens.map((x) => x.membro?.id).filter(Boolean) as string[]);
+  const antes = (anterior?.pres ?? []).filter((p) => p.status !== "saiu");
+  const idsAntes = new Set(antes.map((p) => p.membro_id));
+  const entraram = anterior?.pres.length ? [...itens.filter((x) => (x.membro ? !idsAntes.has(x.membro.id) : x.decidido)).map((x) => (x.membro ? nomeCurto(x.membro) : x.nome))] : [];
+  const sairam = antes.filter((p) => !idsAgora.has(p.membro_id)).map((p) => nomeDoId(p.membro_id));
 
   async function confirmar() {
     if (!pelada || !usuario || !lida) return;
@@ -96,7 +131,7 @@ export default function ListaPage() {
     const sb = criarClienteSupabase();
 
     // 1. Cadastra os novos (nota 3, posição "qualquer").
-    const novosDados = novos.map((x) => ({ pelada_id: pelada.id, nome: x.nome, goleiro: x.secao === "goleiros", convidado: true }));
+    const novosDados = [...new Map(novos.map((x) => [x.nome, x])).values()].map((x) => ({ pelada_id: pelada.id, nome: x.nome, goleiro: x.secao === "goleiros", convidado: true }));
     const criados = new Map<string, string>();
     if (novosDados.length) {
       const { data, error } = await sb.from("membros").insert(novosDados).select("id, nome");
@@ -109,8 +144,7 @@ export default function ListaPage() {
     }
 
     // 2. Acha (ou cria) o evento do dia.
-    const proxima = proximaPelada(pelada.dia_semana, pelada.horario);
-    const dia = (lida.data && deDataBr(lida.data)) || (proxima ? isoDia(proxima) : isoDia(new Date()));
+    const dia = diaDa(lida);
     let { data: ev } = await sb.from("eventos").select("id").eq("pelada_id", pelada.id).eq("data", dia).neq("status", "cancelado").maybeSingle();
     if (!ev) {
       const r = await sb.from("eventos").insert({ pelada_id: pelada.id, data: dia, horario: lida.horario, lista_texto: texto, status: "lista" }).select("id").single();
@@ -125,16 +159,22 @@ export default function ListaPage() {
 
     // 3. Presença: linha e goleiros confirmados, suplentes na espera (sem repetir ninguém).
     const vistos = new Set<string>();
-    const presencas = itens
+    const presencas: { evento_id: string; membro_id: string; status: Presenca["status"]; goleiro: boolean; ordem: number }[] = itens
       .map((x, ordem) => {
         const id = x.membro?.id ?? criados.get(x.nome);
         if (!id || vistos.has(id)) return null;
         vistos.add(id);
-        return { evento_id: ev.id, membro_id: id, status: x.secao === "suplentes" ? "espera" : "confirmado", goleiro: x.secao === "goleiros", ordem };
+        return { evento_id: ev.id, membro_id: id, status: (x.secao === "suplentes" ? "espera" : "confirmado") as Presenca["status"], goleiro: x.secao === "goleiros", ordem };
       })
       .filter((x) => x !== null);
-    await sb.from("presencas").delete().eq("evento_id", ev.id);
-    const { error } = await sb.from("presencas").insert(presencas);
+    // Quem estava na lista e sumiu (ou riscou o nome) fica como "fora hoje", não é apagado.
+    const ja = await carregarPresencas(ev.id);
+    const fora = new Set([...ja.map((p) => p.membro_id), ...riscados.map((m) => m.id)].filter((id) => !vistos.has(id)));
+    for (const id of fora) {
+      const antes = ja.find((p) => p.membro_id === id);
+      presencas.push({ evento_id: ev.id, membro_id: id, status: "saiu", goleiro: antes?.goleiro ?? false, ordem: 900 + presencas.length });
+    }
+    const { error } = await sb.from("presencas").upsert(presencas);
     setSalvando(false);
     if (error) return setErro("Não deu pra salvar a presença.");
     router.push(`/${slug}/sortear`);
@@ -154,7 +194,7 @@ export default function ListaPage() {
             Mensagem colada
           </label>
           {texto ? (
-            <button type="button" onClick={() => { setTexto(""); setLida(null); setItens([]); setVeioDoZap(false); }} className="text-sm font-semibold text-roxo">
+            <button type="button" onClick={() => { setTexto(""); setLida(null); setItens([]); setVeioDoZap(false); setAnterior(null); }} className="text-sm font-semibold text-roxo">
               Limpar
             </button>
           ) : (
@@ -191,6 +231,40 @@ export default function ListaPage() {
             </div>
           ))}
         </div>
+      )}
+
+      {lida && (entraram.length > 0 || sairam.length > 0) && (
+        <section className="flex flex-col gap-1.5 rounded-2xl border-2 border-roxo/40 bg-white p-4 text-sm">
+          <span className="font-semibold">O que mudou desde a última lista</span>
+          {entraram.length > 0 && (
+            <span>
+              <strong className="text-zap">Entraram:</strong> {entraram.join(", ")}
+            </span>
+          )}
+          {sairam.length > 0 && (
+            <span>
+              <strong className="text-alerta">Saíram:</strong> {sairam.join(", ")} <span className="text-apagado">(ficam como “fora hoje”)</span>
+            </span>
+          )}
+        </section>
+      )}
+
+      {lida && (riscados.length > 0 || lida.vazias > 0) && (
+        <section className="flex flex-col gap-1 rounded-2xl border border-borda bg-white p-4 text-sm">
+          {riscados.length > 0 && (
+            <span>
+              <strong>Riscaram o nome:</strong> {riscados.map(nomeCurto).join(", ")} <span className="text-apagado">(ficam fora hoje)</span>
+            </span>
+          )}
+          {lida.vazias > 0 && (
+            <span>
+              <strong>
+                {lida.vazias} {lida.vazias === 1 ? "vaga vazia" : "vagas vazias"}
+              </strong>{" "}
+              <span className="text-apagado">· se ninguém entrar, no sorteio vira RESERVA</span>
+            </span>
+          )}
+        </section>
       )}
 
       {duvidas.length > 0 && (
@@ -235,7 +309,7 @@ export default function ListaPage() {
           {novos.length > 0 && (
             <>
               <span className="pt-2 font-semibold">Novos no elenco · {novos.length}</span>
-              <span className="text-apagado">{novos.map((x) => x.nome).join(", ")} (entram com 3 estrelas, dá pra ajustar depois)</span>
+              <span className="text-apagado">{novos.map((x) => (x.convidadoDe && !x.nome.startsWith("Convidado") ? `${x.nome} (conv. do ${x.convidadoDe})` : x.nome)).join(", ")} (entram como convidado com 3 estrelas, dá pra ajustar depois)</span>
             </>
           )}
         </section>

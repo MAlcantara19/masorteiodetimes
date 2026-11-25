@@ -21,6 +21,7 @@ import Estrelas from "@/components/Estrelas";
 import Folha, { Escolha, Interruptor } from "@/components/Folha";
 import Icone from "@/components/Icone";
 import Topo, { Carregando } from "@/components/Topo";
+import { ehReserva } from "@/lib/montar-sorteio";
 
 const CURTO: Record<string, string> = {
   "0.5": "Começando", "1": "Muito fraco", "1.5": "Ruim", "2": "Básico", "2.5": "Abaixo da média",
@@ -82,7 +83,7 @@ export default function JogadoresPage() {
   const lista = useMemo(() => {
     const q = normalizar(busca);
     return (elenco ?? [])
-      .filter((m) => mostrarInativos || m.ativo)
+      .filter((m) => (mostrarInativos || m.ativo) && !ehReserva(m))
       .filter((m) => !q || normalizar(`${m.nome} ${m.apelido ?? ""} ${(m.apelidos ?? []).join(" ")}`).includes(q))
       .sort((a, b) => nomeCurto(a).localeCompare(nomeCurto(b)));
   }, [elenco, busca, mostrarInativos]);

@@ -81,8 +81,8 @@ export default function SortearPage() {
       }
       return { ids, pendentes };
     };
-    const linha = garantir(l.linha, false);
-    const gols = garantir(l.goleiros, true);
+    const linha = garantir(l.linha.map((x) => x.nome), false);
+    const gols = garantir(l.goleiros.map((x) => x.nome), true);
     atualizarElenco(novoElenco);
     setLista(l);
     setPresentes(linha.ids);

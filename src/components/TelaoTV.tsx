@@ -2,6 +2,7 @@
 // Telão pra TV da quadra: placar e cronômetro gigantes, quem está em campo, artilharia,
 // vitórias do dia e o próximo jogo. Só mostra (não mexe em nada) e se atualiza sozinho.
 import { useCallback, useEffect, useMemo, useState } from "react";
+import SomTelao from "@/components/SomTelao";
 import QRCode from "qrcode";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { carregarElenco, nomeCurto, type Membro, type Pelada } from "@/lib/pelada";
@@ -209,6 +210,13 @@ export default function TelaoTV({ pelada, link }: { pelada: Pelada; link: string
           )}
         </aside>
       </main>
+
+      <SomTelao
+        golId={ultimoGol?.id ?? null}
+        golFala={ultimoGol ? (ultimoGol.tipo === "gol_contra" ? "Gol contra!" : ultimoGol.autor_id ? `Gooool do ${nome(ultimoGol.autor_id)}!` : "Gooool!") : ""}
+        tempoAcabou={partida.status === "rolando" && (!!excedido || (pelada.regra_fim !== "tempo" && Math.max(partida.placar_a, partida.placar_b) >= pelada.gols_limite))}
+        partidaId={partida.id}
+      />
 
       {golFlash && (
         <div className="telao-gol absolute inset-0 flex flex-col items-center justify-center gap-[2vh] bg-noite/90">

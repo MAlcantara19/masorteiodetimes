@@ -17,48 +17,89 @@ export type DadosPeriodo = {
   votos: Voto[];
 };
 
+type Pedido = (de: number, ate: number) => PromiseLike<{ data: unknown[] | null; error: unknown }>;
+
+// O Supabase devolve no máximo 1000 linhas por pedido: busca de 1000 em 1000 até acabar.
+async function todasAsLinhas<T>(pedido: Pedido): Promise<T[]> {
+  const out: T[] = [];
+  for (let de = 0; ; de += 1000) {
+    const { data, error } = await pedido(de, de + 999);
+    if (error || !data) break;
+    out.push(...(data as T[]));
+    if (data.length < 1000) break;
+  }
+  return out;
+}
+
+// Lista grande de ids vira vários pedidos pequenos (a URL do pedido tem limite de tamanho).
+async function emLotes<T>(ids: string[], pedido: (lote: string[]) => Pedido): Promise<T[]> {
+  const lotes: string[][] = [];
+  for (let i = 0; i < ids.length; i += 100) lotes.push(ids.slice(i, i + 100));
+  return (await Promise.all(lotes.map((l) => todasAsLinhas<T>(pedido(l))))).flat();
+}
+
+// Votos de vários dias num pedido só (SQL 0006); sem ele, um pedido por dia.
+async function carregarVotos(ids: string[]): Promise<Voto[]> {
+  const sb = criarClienteSupabase();
+  const lotes: string[][] = [];
+  for (let i = 0; i < ids.length; i += 100) lotes.push(ids.slice(i, i + 100));
+  const r = await Promise.all(lotes.map((l) => sb.rpc("contagem_votos_eventos", { p_eventos: l })));
+  if (r.every((x) => !x.error)) return r.flatMap((x) => ((x.data ?? []) as Voto[]).map((v) => ({ ...v, votos: Number(v.votos) })));
+  const porEvento = await Promise.all(
+    ids.map((id) => sb.rpc("contagem_votos", { p_evento: id }).then(({ data }) => ((data ?? []) as Omit<Voto, "evento_id">[]).map((v) => ({ ...v, evento_id: id, votos: Number(v.votos) })))),
+  );
+  return porEvento.flat();
+}
+
 // Carrega tudo de uma pelada entre duas datas ("AAAA-MM-DD"), ou de eventos específicos.
+// O RESERVA (vaga vazia do sorteio) sai daqui: não entra em ranking, card nem estatística.
 export async function carregarPeriodo(peladaId: string, desde?: string, ate?: string, eventoIds?: string[]): Promise<DadosPeriodo> {
   const sb = criarClienteSupabase();
-  let q = sb.from("eventos").select("*").eq("pelada_id", peladaId).neq("status", "cancelado").order("data");
-  if (desde) q = q.gte("data", desde);
-  if (ate) q = q.lte("data", ate);
-  if (eventoIds) q = q.in("id", eventoIds);
-  const { data: evs } = await q;
-  const eventos = (evs ?? []) as Evento[];
+  const eventos = await todasAsLinhas<Evento>((de, a) => {
+    let q = sb.from("eventos").select("*").eq("pelada_id", peladaId).neq("status", "cancelado");
+    if (desde) q = q.gte("data", desde);
+    if (ate) q = q.lte("data", ate);
+    if (eventoIds) q = q.in("id", eventoIds);
+    return q.order("data").order("id").range(de, a);
+  });
   const ids = eventos.map((e) => e.id);
   if (!ids.length) return { eventos, partidas: [], lances: [], sorteios: [], presencas: [], pausas: [], votos: [] };
 
-  const [{ data: ps }, { data: ss }, { data: pr }] = await Promise.all([
-    sb.from("partidas").select("*").in("evento_id", ids).order("numero"),
-    sb.from("sorteios").select("*").in("evento_id", ids).order("numero"),
-    sb.from("presencas").select("evento_id, membro_id, status, goleiro, ordem").in("evento_id", ids),
+  const [partidas, todos, presencas, reservasDb] = await Promise.all([
+    emLotes<Partida>(ids, (l) => (de, a) => sb.from("partidas").select("*").in("evento_id", l).order("numero").order("id").range(de, a)),
+    emLotes<SorteioSalvo>(ids, (l) => (de, a) => sb.from("sorteios").select("*").in("evento_id", l).order("numero").order("id").range(de, a)),
+    emLotes<Presenca & { evento_id: string }>(ids, (l) => (de, a) => sb.from("presencas").select("evento_id, membro_id, status, goleiro, ordem").in("evento_id", l).order("membro_id").order("evento_id").range(de, a)),
+    sb.from("membros").select("id").eq("pelada_id", peladaId).eq("convidado", true).eq("ativo", false).like("nome", "RESERVA%"),
   ]);
-  const partidas = (ps ?? []) as Partida[];
+  partidas.sort((a, b) => a.numero - b.numero);
   const pids = partidas.map((p) => p.id);
-  const [{ data: ls }, { data: pa }, votosPorEvento] = await Promise.all([
-    pids.length ? sb.from("lances").select("*").in("partida_id", pids).eq("desfeito", false).order("created_at") : Promise.resolve({ data: [] }),
-    pids.length ? sb.from("pausas").select("*").in("partida_id", pids) : Promise.resolve({ data: [] }),
-    Promise.all(ids.map((id) => sb.rpc("contagem_votos", { p_evento: id }).then(({ data }) => ((data ?? []) as Omit<Voto, "evento_id">[]).map((v) => ({ ...v, evento_id: id, votos: Number(v.votos) }))))),
+  const [lances, pausas, votos] = await Promise.all([
+    emLotes<Lance>(pids, (l) => (de, a) => sb.from("lances").select("*").in("partida_id", l).eq("desfeito", false).order("created_at").order("id").range(de, a)),
+    emLotes<Pausa>(pids, (l) => (de, a) => sb.from("pausas").select("*").in("partida_id", l).order("id").range(de, a)),
+    carregarVotos(ids),
   ]);
+  lances.sort((a, b) => a.created_at.localeCompare(b.created_at));
+
+  const reserva = new Set(((reservasDb.data ?? []) as { id: string }[]).map((m) => m.id));
+  const tira = (id: string | null) => (id && reserva.has(id) ? null : id);
 
   // Um sorteio por evento: o oficial, senão o último.
-  const todos = (ss ?? []) as SorteioSalvo[];
   const sorteios = ids
     .map((id) => {
-      const doEvento = todos.filter((s) => s.evento_id === id);
+      const doEvento = todos.filter((s) => s.evento_id === id).sort((a, b) => a.numero - b.numero);
       return doEvento.find((s) => s.oficial) ?? doEvento[doEvento.length - 1];
     })
-    .filter((s): s is SorteioSalvo => !!s);
+    .filter((s): s is SorteioSalvo => !!s)
+    .map((s) => (reserva.size ? { ...s, times: s.times.map((t) => t.filter((id) => !reserva.has(id))) } : s));
 
   return {
     eventos,
     partidas,
-    lances: (ls ?? []) as Lance[],
+    lances: reserva.size ? lances.map((l) => ({ ...l, autor_id: tira(l.autor_id), assist_id: tira(l.assist_id) })) : lances,
     sorteios,
-    presencas: (pr ?? []) as (Presenca & { evento_id: string })[],
-    pausas: (pa ?? []) as Pausa[],
-    votos: votosPorEvento.flat(),
+    presencas: presencas.filter((p) => !reserva.has(p.membro_id)),
+    pausas,
+    votos: votos.filter((v) => !reserva.has(v.votado_id)),
   };
 }
 

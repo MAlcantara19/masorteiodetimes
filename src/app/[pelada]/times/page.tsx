@@ -1,6 +1,7 @@
 "use client";
 // Times sorteados: abas Sorteio 1 a 4, troca tocando em 2 nomes, desfazer, oficial,
 // imagem clara/escura (sem nota nenhuma), baixar, copiar, mandar no Zap e começar o jogo.
+// Trocar alguém (ou o RESERVA) por quem chegou: do elenco ou um nome novo, sem precisar da lista.
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -13,7 +14,6 @@ import {
   carregarSorteios,
   eventoAtual,
   lerConfig,
-  rodarSorteio,
   NOMES_TIMES,
   type Evento,
   type Regra,
@@ -23,6 +23,7 @@ import { curtaDia, DIAS, deIso } from "@/lib/datas";
 import CardTimes, { type TimeCard } from "@/components/CardTimes";
 import { Escolha } from "@/components/Folha";
 import Topo, { Carregando } from "@/components/Topo";
+import { ehReserva, montarSorteio } from "@/lib/montar-sorteio";
 
 export default function TimesPage() {
   const router = useRouter();
@@ -40,6 +41,9 @@ export default function TimesPage() {
   const [gerandoImagem, setGerandoImagem] = useState(false);
   const [aviso, setAviso] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  // Trocando quem está nessa posição por alguém de fora (time, posição).
+  const [trocando, setTrocando] = useState<[number, number] | null>(null);
+  const [nomeNovo, setNomeNovo] = useState("");
   const cardRef = useRef<HTMLDivElement>(null);
   const todosRef = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -104,6 +108,14 @@ export default function TimesPage() {
 
   function tocar(ti: number, pi: number) {
     if (!admin) return;
+    // Tocou no RESERVA: já abre "quem entra no lugar".
+    const m = porId.get(s.times[ti]?.[pi]);
+    if (m && ehReserva(m) && !sel) {
+      setSel([ti, pi]);
+      setTrocando([ti, pi]);
+      return;
+    }
+    setTrocando(null);
     if (!sel || sel[0] === ti) {
       setSel(sel && sel[0] === ti && sel[1] === pi ? null : [ti, pi]);
       return;
@@ -114,6 +126,31 @@ export default function TimesPage() {
     setHistorico([...historico, { id: s.id, times: s.times }]);
     setSel(null);
     salvarTimes(s, times);
+  }
+
+  // Põe alguém de fora no lugar de quem está em [ti, pi] (e marca presença dele hoje).
+  async function entrarNoLugar(id: string) {
+    if (!trocando || !evento) return;
+    const [ti, pi] = trocando;
+    const times = s.times.map((t) => t.slice());
+    times[ti][pi] = id;
+    setHistorico([...historico, { id: s.id, times: s.times }]);
+    setSel(null);
+    setTrocando(null);
+    await salvarTimes(s, times);
+    await criarClienteSupabase().from("presencas").upsert({ evento_id: evento.id, membro_id: id, status: "confirmado", goleiro: false, ordem: 500 + pi });
+  }
+
+  async function entrarNovo() {
+    const nome = nomeNovo.trim();
+    if (!nome || !usuario || !pelada) return;
+    const sb = criarClienteSupabase();
+    const { data, error } = await sb.from("membros").insert({ pelada_id: pelada.id, nome, convidado: true }).select("id, pelada_id, profile_id, nome, apelido, papel, posicao, sabe_marcar, goleiro, convidado, ativo").single();
+    if (error || !data) return setAviso("Não deu pra cadastrar esse nome.");
+    await sb.from("notas").insert({ membro_id: data.id, nota_simples: 3, atualizado_por: usuario.id });
+    setElenco([...elenco, { ...(data as unknown as Membro), nota: { nota_simples: 3, atributos: null, usar_completa: false } }]);
+    setNomeNovo("");
+    await entrarNoLugar(data.id);
   }
 
   function desfazer() {
@@ -135,12 +172,24 @@ export default function TimesPage() {
     ]);
     const linha = pres.filter((p) => !p.goleiro && p.status !== "saiu");
     const ordenada = [...linha.filter((p) => p.status === "confirmado"), ...linha.filter((p) => p.status === "espera")];
-    const res = rodarSorteio(
-      ordenada.map((p) => porId.get(p.membro_id)).filter((m): m is Membro => !!m),
-      pres.filter((p) => p.goleiro && p.status !== "saiu").map((p) => porId.get(p.membro_id)).filter((m): m is Membro => !!m),
-      lerConfig(slug),
-      (r ?? []) as Regra[],
-    );
+    let res: Awaited<ReturnType<typeof montarSorteio>>;
+    try {
+      res = await montarSorteio({
+        peladaId: pelada!.id,
+        eventoData: evento.data,
+        linha: ordenada.map((p) => porId.get(p.membro_id)).filter((m): m is Membro => !!m),
+        goleiros: pres.filter((p) => p.goleiro && p.status !== "saiu").map((p) => porId.get(p.membro_id)).filter((m): m is Membro => !!m),
+        elenco,
+        cfg: lerConfig(slug),
+        regras: (r ?? []) as Regra[],
+        usuarioId: usuario.id,
+      });
+    } catch {
+      setOcupado(false);
+      return setAviso("Não deu pra sortear de novo.");
+    }
+    // O RESERVA pode ter acabado de ser criado: recarrega o elenco pra mostrar o nome.
+    if (res.reservas) setElenco(await carregarElenco(pelada!.id, admin));
     const numero = Math.max(0, ...sorteios.map((x) => x.numero)) + 1;
     const { data } = await sb
       .from("sorteios")
@@ -302,7 +351,7 @@ export default function TimesPage() {
           Só admins veem: diferença de {diferenca.toFixed(1).replace(".", ",")}★ na média entre o time mais forte e o mais fraco.
         </p>
       )}
-      {admin && <p className="text-[13px] text-apagado">Toca em 2 nomes de times diferentes pra trocar. As médias nunca saem na imagem.</p>}
+      {admin && <p className="text-[13px] text-apagado">Toca em 2 nomes de times diferentes pra trocar. Toca no RESERVA pra pôr quem chegou. As médias nunca saem na imagem.</p>}
 
       <CardTimes
         ref={cardRef}
@@ -333,6 +382,48 @@ export default function TimesPage() {
             />
           ))}
         </div>
+      )}
+
+      {admin && sel && !trocando && (
+        <button type="button" onClick={() => setTrocando(sel)} className="h-10 rounded-xl border-2 border-dashed border-roxo bg-white text-sm font-semibold text-roxo">
+          Trocar {porId.get(s.times[sel[0]]?.[sel[1]]) ? nomeCurto(porId.get(s.times[sel[0]][sel[1]]) as Membro) : ""} por alguém de fora
+        </button>
+      )}
+
+      {admin && trocando && (
+        <section className="flex flex-col gap-2 rounded-2xl border-2 border-roxo bg-white p-4">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold">
+              Quem entra no lugar de {porId.get(s.times[trocando[0]]?.[trocando[1]]) ? nomeCurto(porId.get(s.times[trocando[0]][trocando[1]]) as Membro) : "?"}?
+            </span>
+            <button type="button" onClick={() => { setTrocando(null); setSel(null); }} className="text-sm font-semibold text-apagado">
+              Cancelar
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {elenco
+              .filter((m) => m.ativo && !m.goleiro && !s.times.flat().includes(m.id) && !(s.goleiros ?? []).includes(m.id))
+              .sort((a, b) => nomeCurto(a).localeCompare(nomeCurto(b)))
+              .map((m) => (
+                <button key={m.id} type="button" onClick={() => entrarNoLugar(m.id)} className="h-8 rounded-full border border-borda bg-white px-3 text-sm">
+                  {nomeCurto(m)}
+                </button>
+              ))}
+          </div>
+          <div className="flex gap-2">
+            <input
+              value={nomeNovo}
+              onChange={(e) => setNomeNovo(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && entrarNovo()}
+              placeholder="Ou escreve um nome novo"
+              aria-label="Nome novo"
+              className="h-10 min-w-0 flex-1 rounded-xl border border-borda bg-fundo px-3 text-sm"
+            />
+            <button type="button" onClick={entrarNovo} disabled={!nomeNovo.trim()} className="h-10 shrink-0 rounded-xl bg-roxo px-3 text-sm font-semibold text-white disabled:opacity-40">
+              Entrar
+            </button>
+          </div>
+        </section>
       )}
 
       {admin && (

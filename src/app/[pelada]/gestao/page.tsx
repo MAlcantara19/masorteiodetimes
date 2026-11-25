@@ -214,6 +214,9 @@ export default function GestaoPage() {
               </a>
             </div>
           )}
+          <Link href={`/${slug}/cobrar`} className="text-center text-sm font-semibold text-roxo">
+            Cobrar com Pix copia e cola, diária ou uma pessoa só →
+          </Link>
         </>
       )}
 

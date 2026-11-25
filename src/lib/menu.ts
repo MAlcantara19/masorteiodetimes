@@ -6,7 +6,7 @@ import type { PeladaResumo } from "@/lib/sessao";
 import { temRecurso, type Recurso } from "@/lib/planos";
 
 // Itens que dependem do plano da pelada.
-const DO_PLANO: Record<string, Recurso> = { pagar: "pix", retrospectiva: "retrospectiva", banners: "banners", fotos: "fotos", album: "album", confrontos: "confrontos_admin", caixa: "caixa", telao: "telao" };
+const DO_PLANO: Record<string, Recurso> = { pagar: "pix", cobrar: "pix", retrospectiva: "retrospectiva", banners: "banners", fotos: "fotos", album: "album", confrontos: "confrontos_admin", caixa: "caixa", telao: "telao" };
 
 export type ItemMenu = { id: string; href: string; titulo: string; sub: string; icone: NomeIcone };
 export type GruposMenu = { master: ItemMenu[]; admin: ItemMenu[]; jogador: ItemMenu[]; geral: ItemMenu[] };
@@ -42,6 +42,7 @@ export function montarMenu(atual: PeladaResumo | null, admin: boolean, ehMaster:
           { id: "resultados", href: `${b}/resultados`, titulo: "Resultados do dia", sub: "jogos, gols e correções", icone: "grafico" },
           { id: "banners", href: `${b}/banners`, titulo: "Banners", sub: "story e quadrado", icone: "imagem" },
           { id: "gestao", href: `${b}/gestao`, titulo: "Presença e mensalidade", sub: "quem veio, quem pagou", icone: "dinheiro" },
+          { id: "cobrar", href: `${b}/cobrar`, titulo: "Cobrar com Pix", sub: "mensalidade ou diária, mensagem pronta", icone: "dinheiro" },
           { id: "confrontos", href: `${b}/confrontos`, titulo: "Confrontos", sub: "duplas que vencem e rivalidades", icone: "escudo" },
           { id: "config", href: `${b}/config`, titulo: "Configurar pelada", sub: "cores, camisa, Pix, PIN", icone: "lapis" },
         ]

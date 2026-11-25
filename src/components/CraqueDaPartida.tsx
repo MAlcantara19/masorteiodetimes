@@ -91,7 +91,8 @@ export default function CraqueDaPartida({ partida, times, nome, agoraServidor, a
   const max = Math.max(0, ...votos.values());
   const lados = [partida.time_a, partida.time_b].map((t) => ({
     t,
-    ids: [...(times[t] ?? []), ...([t === partida.time_a ? partida.goleiro_a : partida.goleiro_b].filter((g): g is string => !!g && !(times[t] ?? []).includes(g)))],
+    // O RESERVA (vaga vazia do sorteio) não recebe voto.
+    ids: [...(times[t] ?? []), ...([t === partida.time_a ? partida.goleiro_a : partida.goleiro_b].filter((g): g is string => !!g && !(times[t] ?? []).includes(g)))].filter((id) => !/^RESERVA( \d+)?$/.test(nome(id))),
   }));
 
   return (

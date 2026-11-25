@@ -25,6 +25,7 @@ export type Pelada = {
   pix_chave?: string | null; // (SQL 0003)
   pix_nome?: string | null;
   pix_cidade?: string | null;
+  valor_diaria?: number | null; // (SQL 0006) quem paga por pelada
   cor_secundaria?: string | null; // (SQL 0004)
   camisa_estilo?: string | null;
   plano?: string | null;

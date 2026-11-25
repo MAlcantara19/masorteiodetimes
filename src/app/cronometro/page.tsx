@@ -2,9 +2,11 @@
 // Cronômetro simples: funciona só neste aparelho, sem internet, sem sorteio e sem login.
 // Regressivo; quando zera, NÃO para: mostra "tempo excedido" contando pra cima até alguém pausar.
 // Mostra tempo real × bola rolando × parado, guarda o motivo de cada pausa e o placar do dia.
+// Regra "7 minutos ou 2 gols": escolhe os gols pra acabar. Apita (som) quando acaba o tempo ou bate os gols.
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { formatarRelogio } from "@/lib/partida";
+import { apitar, liberarSom } from "@/lib/som";
 
 type Pausa = { inicio: number; fim: number | null; motivo: string | null };
 type Jogo = { nomes: [string, string]; placar: [number, number]; rolando: number; real: number; pausas: number };
@@ -19,6 +21,8 @@ type Estado = {
   nomes: [string, string];
   dia: string; // "AAAA-MM-DD" do histórico abaixo
   jogos: Jogo[]; // jogos já encerrados hoje
+  gols?: number; // gols pra acabar (0 = só tempo)
+  som?: boolean; // apito quando acaba
 };
 
 const CHAVE = "masorteio:cronometro:v2";
@@ -35,12 +39,16 @@ export default function CronometroPage() {
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem(CHAVE);
-      const min = Number(new URLSearchParams(window.location.search).get("min"));
+      const busca = new URLSearchParams(window.location.search);
+      const min = Number(busca.get("min"));
+      const gols = busca.has("gols") ? Number(busca.get("gols")) : null;
       const salvo = raw ? (JSON.parse(raw) as Estado) : null;
       const dia = hojeIso();
+      // O link da partida manda os minutos e os gols da pelada: vale se o jogo ainda não começou.
+      const daPelada = salvo && !salvo.inicio ? { ...(min > 0 ? { minutos: min } : {}), ...(gols !== null && gols >= 0 ? { gols } : {}) } : {};
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      if (salvo) setE({ ...salvo, ...(salvo.dia !== dia ? { dia, jogos: [] } : {}) });
-      else setE((x) => ({ ...x, dia, minutos: min > 0 ? min : x.minutos }));
+      if (salvo) setE({ ...salvo, ...daPelada, ...(salvo.dia !== dia ? { dia, jogos: [] } : {}) });
+      else setE((x) => ({ ...x, dia, minutos: min > 0 ? min : x.minutos, gols: gols !== null && gols >= 0 ? gols : x.gols }));
     } catch {}
     setAgora(Date.now());
     const t = setInterval(() => setAgora(Date.now()), 250);
@@ -78,17 +86,21 @@ export default function CronometroPage() {
   const rolando = Math.max(0, real - parado);
   const restante = e.minutos * 60 + e.extra - rolando;
   const excedido = e.inicio && restante < 0 ? -restante : 0;
-  const status = e.fim ? "fim" : !e.inicio ? "pronto" : aberta ? "pausado" : excedido ? "excedido" : "rolando";
+  const limiteGols = e.gols ?? 0;
+  const bateuGols = !!limiteGols && Math.max(...e.placar) >= limiteGols;
+  const status = e.fim ? "fim" : !e.inicio ? "pronto" : bateuGols ? "gols" : aberta ? "pausado" : excedido ? "excedido" : "rolando";
 
   useEffect(() => {
-    if (status === "excedido" && !vibrou.current) {
+    if ((status === "excedido" || status === "gols") && !vibrou.current) {
       vibrou.current = true;
       if (navigator.vibrate) navigator.vibrate([400, 200, 400, 200, 400]);
+      if (e.som !== false) apitar("fim");
     }
     if (status === "pronto") vibrou.current = false;
-  }, [status]);
+  }, [status, e.som]);
 
   function playPausa() {
+    liberarSom();
     const t = Date.now();
     if (e.fim) return;
     if (!e.inicio) setE({ ...e, inicio: t });
@@ -120,8 +132,8 @@ export default function CronometroPage() {
   }
 
   const relogio = excedido ? `+${formatarRelogio(excedido)}` : formatarRelogio(restante);
-  const corRelogio = excedido ? "text-alerta-suave" : "";
-  const rotulo = { pronto: "PRONTO PRA COMEÇAR", pausado: `PAUSADO${aberta?.motivo ? " · " + aberta.motivo.toUpperCase() : ""}`, excedido: "TEMPO ESGOTADO · EXCEDIDO", rolando: "ROLANDO", fim: "ENCERRADO" }[status];
+  const corRelogio = excedido || bateuGols ? "text-alerta-suave" : "";
+  const rotulo = { gols: `FIM · CHEGOU A ${limiteGols} ${limiteGols === 1 ? "GOL" : "GOLS"}`, pronto: "PRONTO PRA COMEÇAR", pausado: `PAUSADO${aberta?.motivo ? " · " + aberta.motivo.toUpperCase() : ""}`, excedido: "TEMPO ESGOTADO · EXCEDIDO", rolando: "ROLANDO", fim: "ENCERRADO" }[status];
 
   // Placar do dia por nome de time
   const tabela = new Map<string, { v: number; e: number; d: number; gp: number }>();
@@ -172,20 +184,33 @@ export default function CronometroPage() {
           <h1 className="font-display text-2xl font-bold">Cronômetro</h1>
           <span className="text-[13px] text-apagado">Só neste aparelho · funciona sem internet</span>
         </div>
+        <span className="flex gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            liberarSom();
+            setE({ ...e, som: e.som === false });
+          }}
+          aria-pressed={e.som !== false}
+          className="rounded-full border border-borda bg-white px-3 py-1.5 text-sm font-semibold whitespace-nowrap"
+        >
+          {e.som === false ? "🔇 Sem apito" : "📣 Apito"}
+        </button>
         <button
           type="button"
           onClick={() => {
             setTelao(true);
             document.documentElement.requestFullscreen?.().catch(() => {});
           }}
-          className="rounded-full border border-borda bg-white px-3 py-1.5 text-sm font-semibold"
+          className="rounded-full border border-borda bg-white px-3 py-1.5 text-sm font-semibold whitespace-nowrap"
         >
           Telão
         </button>
+        </span>
       </header>
 
       <section className="flex flex-col items-center gap-3 rounded-3xl bg-noite px-4 pt-4 pb-5 text-white">
-        <span className={`text-xs font-bold tracking-widest ${excedido ? "text-alerta-suave" : "text-roxo-claro"}`}>{rotulo}</span>
+        <span className={`text-xs font-bold tracking-widest ${excedido || bateuGols ? "text-alerta-suave" : "text-roxo-claro"}`}>{rotulo}</span>
         <span className={`font-display text-[88px] leading-none font-bold tabular-nums ${corRelogio}`}>{relogio}</span>
         {e.inicio && (
           <div className="grid w-full grid-cols-3 gap-1 text-center text-[11px] text-[#CFC7E0]">
@@ -221,7 +246,7 @@ export default function CronometroPage() {
               Encerrar
             </button>
             <button type="button" onClick={playPausa} className="h-12 rounded-xl bg-roxo text-base font-bold">
-              {status === "pronto" ? "Iniciar" : status === "pausado" ? "Voltar" : "Pausar"}
+              {status === "pronto" ? "Iniciar" : status === "pausado" || (status === "gols" && aberta) ? "Voltar" : "Pausar"}
             </button>
             <button type="button" onClick={() => setE({ ...e, extra: e.extra + 60 })} className="h-12 rounded-xl bg-white/10 text-sm font-semibold">
               +1 min
@@ -251,6 +276,16 @@ export default function CronometroPage() {
             {[5, 7, 8, 10, 12, 15].map((m) => (
               <button key={m} type="button" onClick={() => setE({ ...e, minutos: m })} className={`h-9 w-9 rounded-lg font-semibold ${e.minutos === m ? "bg-roxo" : "bg-white/10"}`}>
                 {m}
+              </button>
+            ))}
+          </div>
+        )}
+        {status === "pronto" && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className="text-[#CFC7E0]">Ou gols:</span>
+            {[0, 1, 2, 3].map((g) => (
+              <button key={g} type="button" onClick={() => setE({ ...e, gols: g })} className={`h-9 min-w-9 rounded-lg px-2 font-semibold ${limiteGols === g ? "bg-roxo" : "bg-white/10"}`}>
+                {g === 0 ? "só tempo" : g}
               </button>
             ))}
           </div>

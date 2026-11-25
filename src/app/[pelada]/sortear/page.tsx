@@ -1,17 +1,20 @@
 "use client";
 // Montar sorteio: quem joga hoje, quantos times, quantos por time, regras salvas da pelada.
+// Também: nome avulso sem precisar da lista, copiar a lista atualizada pro Zap,
+// vaga vazia vira RESERVA e o sorteio que aprende (chaves nas regras).
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { useSessao } from "@/lib/sessao";
 import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
+import { montarSorteio, notaReserva } from "@/lib/montar-sorteio";
+import { montarTextoLista } from "@/lib/lista";
 import {
   carregarPresencas,
   carregarSorteios,
   eventoAtual,
   lerConfig,
-  rodarSorteio,
   salvarConfig,
   CONFIG_PADRAO,
   type ConfigSorteio,
@@ -39,6 +42,8 @@ export default function SortearPage() {
   const [erro, setErro] = useState<string | null>(null);
   // Lista de espera inteligente: quem saiu e o suplente que entrou no lugar (pra avisar no Zap).
   const [chamado, setChamado] = useState<{ entrou: string; saiu: string } | null>(null);
+  const [nomeNovo, setNomeNovo] = useState("");
+  const [copiouLista, setCopiouLista] = useState(false);
 
   const carregar = useCallback(async () => {
     if (!pelada) return;
@@ -74,6 +79,8 @@ export default function SortearPage() {
   const naLista = new Set(pres.map((p) => p.membro_id));
   const foraDaLista = elenco.filter((m) => m.ativo && !naLista.has(m.id)).sort((a, b) => nomeCurto(a).localeCompare(nomeCurto(b)));
   const sobra = ordenada.length - vagas;
+  const reservas = cfg.completarReserva && sobra < 0 ? -sobra : 0;
+  const podeSortear = ordenada.length > 0 && ordenada.length + reservas >= cfg.times * 2;
 
   function mudarCfg(c: Partial<ConfigSorteio>) {
     const n = { ...cfg, ...c };
@@ -98,6 +105,20 @@ export default function SortearPage() {
     const nova: Presenca = { membro_id: m.id, status: "confirmado", goleiro: m.goleiro, ordem };
     setPres([...pres, nova]);
     await criarClienteSupabase().from("presencas").upsert({ evento_id: evento.id, ...nova });
+  }
+
+  // Pessoa que não está no elenco: cadastra como convidado (3 estrelas) e já põe no jogo.
+  async function adicionarNovo() {
+    const nome = nomeNovo.trim();
+    if (!evento || !pelada || !usuario || !nome) return;
+    const sb = criarClienteSupabase();
+    const { data, error } = await sb.from("membros").insert({ pelada_id: pelada.id, nome, convidado: true }).select("id").single();
+    if (error || !data) return setErro("Não deu pra cadastrar esse nome.");
+    await sb.from("notas").insert({ membro_id: data.id, nota_simples: 3, atualizado_por: usuario.id });
+    const ordem = Math.max(0, ...pres.map((p) => p.ordem ?? 0)) + 1;
+    await sb.from("presencas").upsert({ evento_id: evento.id, membro_id: data.id, status: "confirmado", goleiro: false, ordem });
+    setNomeNovo("");
+    carregar();
   }
 
   async function mudarStatus(membroId: string, status: Presenca["status"]) {
@@ -135,7 +156,7 @@ export default function SortearPage() {
   function tocar(membroId: string) {
     if (escolhendo) {
       const ids = escolhendo.ids.includes(membroId) ? escolhendo.ids.filter((x) => x !== membroId) : [...escolhendo.ids, membroId];
-      setEscolhendo({ ...escolhendo, ids: escolhendo.tipo === "separar" ? ids.slice(-2) : ids });
+      setEscolhendo({ ...escolhendo, ids: escolhendo.tipo === "separar" ? ids.slice(-Math.max(2, cfg.times)) : ids });
     }
   }
 
@@ -157,17 +178,27 @@ export default function SortearPage() {
   }
 
   async function sortearAgora() {
-    if (!evento || !usuario) return;
-    if (ordenada.length < cfg.times * 2) return setErro("Gente de menos pra esse número de times.");
+    if (!evento || !usuario || !pelada) return;
+    if (!podeSortear) return setErro("Gente de menos pra esse número de times.");
     setSorteando(true);
     setErro(null);
     const sb = criarClienteSupabase();
-    const r = rodarSorteio(
-      ordenada.map((p) => porId.get(p.membro_id)).filter((m): m is Membro => !!m),
-      goleiros.map((p) => porId.get(p.membro_id)).filter((m): m is Membro => !!m),
-      cfg,
-      regras,
-    );
+    let r: Awaited<ReturnType<typeof montarSorteio>>;
+    try {
+      r = await montarSorteio({
+        peladaId: pelada.id,
+        eventoData: evento.data,
+        linha: ordenada.map((p) => porId.get(p.membro_id)).filter((m): m is Membro => !!m),
+        goleiros: goleiros.map((p) => porId.get(p.membro_id)).filter((m): m is Membro => !!m),
+        elenco,
+        cfg,
+        regras,
+        usuarioId: usuario.id,
+      });
+    } catch (e) {
+      setSorteando(false);
+      return setErro(e instanceof Error ? e.message : "Não deu pra sortear.");
+    }
     // Sortear do zero: apaga os sorteios não oficiais e começa do 1.
     const antigos = await carregarSorteios(evento.id);
     const manter = antigos.filter((s) => s.oficial);
@@ -177,6 +208,21 @@ export default function SortearPage() {
     setSorteando(false);
     if (error) return setErro("Não deu pra salvar o sorteio.");
     router.push(`/${slug}/times`);
+  }
+
+  // A lista do jeito do Zap, já com as mudanças feitas aqui (pra colar de volta no grupo).
+  function textoLista() {
+    if (!evento || !pelada) return "";
+    const [a, m, dd] = evento.data.split("-");
+    const hora = evento.horario ? `${evento.horario.slice(0, 5)}${pelada.horario_fim ? ` até ${pelada.horario_fim.slice(0, 5)}` : ""}` : null;
+    return montarTextoLista({
+      titulo: `Pelada ${dd}/${m}/${a}`,
+      horario: hora,
+      vagas,
+      linha: ordenada.slice(0, vagas).map((p) => nome(p.membro_id)),
+      goleiros: goleiros.map((p) => nome(p.membro_id)),
+      suplentes: ordenada.slice(vagas).map((p) => nome(p.membro_id)),
+    });
   }
 
   if (naoAchou) return <main className="p-6 text-center text-apagado">Pelada não encontrada.</main>;
@@ -220,7 +266,7 @@ export default function SortearPage() {
       {escolhendo && (
         <div className="sticky top-2 z-20 flex items-center gap-2 rounded-xl bg-noite px-3 py-2.5 text-sm text-white">
           <span className="flex-1">
-            {escolhendo.tipo === "junto" ? "Toca em quem joga junto" : "Toca nos 2 que não podem cair juntos"} ({escolhendo.ids.length})
+            {escolhendo.tipo === "junto" ? "Toca em quem joga junto" : `Toca em quem não pode cair junto (até ${Math.max(2, cfg.times)}, um em cada time)`} ({escolhendo.ids.length})
           </span>
           <button type="button" onClick={() => setEscolhendo(null)} className="font-semibold text-[#CFC7E0]">
             Cancelar
@@ -315,8 +361,36 @@ export default function SortearPage() {
         <p className={`mt-1 rounded-xl px-3 py-2 text-sm font-semibold ${sobra === 0 ? "bg-roxo-suave text-roxo-escuro" : "bg-alerta-suave text-alerta-escuro"}`}>
           {sobra === 0 && `${ordenada.length} jogadores → ${cfg.times} times de ${cfg.porTime}. Fecha certinho.`}
           {sobra > 0 && `${sobra} a mais: ${sobra === 1 ? "o último fica" : `os últimos ${sobra} ficam`} na espera.`}
-          {sobra < 0 && `Faltam ${-sobra} pra ${cfg.times} times de ${cfg.porTime}.`}
+          {sobra < 0 && !cfg.completarReserva && `Faltam ${-sobra} pra ${cfg.times} times de ${cfg.porTime}.`}
+          {sobra < 0 &&
+            cfg.completarReserva &&
+            `Faltam ${-sobra}: ${-sobra === 1 ? "entra 1 RESERVA" : `entram ${-sobra} RESERVA`} com ${notaReserva(elenco, cfg.modo).toFixed(1).replace(".", ",")}★ (a nota mais alta). Nos times, toca no RESERVA pra trocar por quem chegar.`}
         </p>
+        <div className="flex gap-2">
+          <input
+            value={nomeNovo}
+            onChange={(e) => setNomeNovo(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && adicionarNovo()}
+            placeholder="Nome de quem não está no elenco"
+            aria-label="Nome novo"
+            className="h-10 min-w-0 flex-1 rounded-xl border border-borda bg-fundo px-3 text-sm"
+          />
+          <button type="button" onClick={adicionarNovo} disabled={!nomeNovo.trim()} className="h-10 shrink-0 rounded-xl bg-roxo px-3 text-sm font-semibold text-white disabled:opacity-40">
+            + Pôr no jogo
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            onClick={() => navigator.clipboard.writeText(textoLista()).then(() => setCopiouLista(true)).catch(() => setErro("Não deu pra copiar."))}
+            className="h-10 rounded-xl border-2 border-zap text-sm font-semibold text-zap"
+          >
+            {copiouLista ? "Lista copiada!" : "Copiar lista atualizada"}
+          </button>
+          <a href={linkZap(textoLista())} target="_blank" rel="noreferrer" className="flex h-10 items-center justify-center rounded-xl bg-zap text-sm font-semibold text-white">
+            Mandar lista no Zap
+          </a>
+        </div>
       </section>
 
       <section className="flex flex-col gap-4 rounded-2xl border border-borda bg-white p-4">
@@ -398,13 +472,27 @@ export default function SortearPage() {
           <span className="font-semibold">Goleiro fixo em cada time</span>
           <Interruptor rotulo="Goleiro fixo" ligado={cfg.goleiroFixo} aoMudar={(v) => mudarCfg({ goleiroFixo: v })} />
         </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="flex flex-col">
+            <span className="font-semibold">Vaga vazia vira RESERVA</span>
+            <span className="text-[13px] text-apagado">com a nota mais alta da pelada, porque quem completa costuma ser forte</span>
+          </span>
+          <Interruptor rotulo="Vaga vazia vira RESERVA" ligado={cfg.completarReserva} aoMudar={(v) => mudarCfg({ completarReserva: v })} />
+        </div>
+        <div className="flex items-center justify-between gap-3">
+          <span className="flex flex-col">
+            <span className="font-semibold">Não repetir os times da última pelada</span>
+            <span className="text-[13px] text-apagado">tenta não juntar de novo quem jogou junto, sem perder o equilíbrio</span>
+          </span>
+          <Interruptor rotulo="Não repetir os times" ligado={cfg.naoRepetir} aoMudar={(v) => mudarCfg({ naoRepetir: v })} />
+        </div>
       </section>
 
       {erro && <p role="alert" className="rounded-xl bg-alerta-suave px-3 py-2 text-sm text-alerta-escuro">{erro}</p>}
 
       <div className="fixed inset-x-0 bottom-[76px] z-20 border-t border-borda bg-fundo/95 px-4 pt-3 pb-3 backdrop-blur">
         <div className="mx-auto max-w-xl">
-          <button type="button" onClick={sortearAgora} disabled={sorteando || ordenada.length < cfg.times * 2} className="h-14 w-full rounded-2xl bg-roxo text-lg font-bold text-white disabled:opacity-40">
+          <button type="button" onClick={sortearAgora} disabled={sorteando || !podeSortear} className="h-14 w-full rounded-2xl bg-roxo text-lg font-bold text-white disabled:opacity-40">
             {sorteando ? "Sorteando…" : "Sortear"}
           </button>
         </div>

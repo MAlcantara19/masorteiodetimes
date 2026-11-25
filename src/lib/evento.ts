@@ -37,9 +37,11 @@ export type ConfigSorteio = {
   modo: "simples" | "completa";
   equilibrarPosicoes: boolean;
   goleiroFixo: boolean;
+  completarReserva: boolean; // vaga vazia vira RESERVA com a nota mais alta
+  naoRepetir: boolean; // sorteio que aprende: evita repetir os times da última pelada
 };
 
-export const CONFIG_PADRAO: ConfigSorteio = { times: 3, porTime: 5, modo: "simples", equilibrarPosicoes: true, goleiroFixo: true };
+export const CONFIG_PADRAO: ConfigSorteio = { times: 3, porTime: 5, modo: "simples", equilibrarPosicoes: true, goleiroFixo: true, completarReserva: true, naoRepetir: false };
 
 // O evento "do momento": o mais recente a partir de ontem (pra não perder a pelada que passou da meia-noite).
 // Com `lancarErro`, sem internet dá erro em vez de "nenhuma pelada" (a tela da partida usa pra manter o que já tem).
@@ -105,6 +107,7 @@ export function rodarSorteio(
   goleiros: Membro[],
   cfg: ConfigSorteio,
   regras: Regra[],
+  evitar?: Set<string>,
 ): { times: string[][]; goleiros: (string | null)[]; espera: string[] } {
   const jogadores: JogadorSorteio[] = linha.map((m) => ({ id: m.id, nome: m.apelido || m.nome, nota: notaDoMembro(m, cfg.modo), posicao: m.posicao }));
   const ids = new Set(linha.map((m) => m.id));
@@ -112,10 +115,15 @@ export function rodarSorteio(
     times: cfg.times,
     porTime: cfg.porTime,
     juntos: regras.filter((x) => x.tipo === "junto").map((x) => x.membros.filter((id) => ids.has(id))),
+    // "Separar" pode ter 2 ou mais (um em cada time): vira todos os pares.
     separar: regras
-      .filter((x) => x.tipo === "separar" && x.membros.length === 2 && x.membros.every((id) => ids.has(id)))
-      .map((x) => [x.membros[0], x.membros[1]] as [string, string]),
+      .filter((x) => x.tipo === "separar")
+      .flatMap((x) => {
+        const m = x.membros.filter((id) => ids.has(id));
+        return m.flatMap((a, i) => m.slice(i + 1).map((b) => [a, b] as [string, string]));
+      }),
     equilibrarPosicoes: cfg.equilibrarPosicoes,
+    evitar,
   });
   // Goleiro fixo: um por time, na ordem da lista (fora da média).
   const gk: (string | null)[] = Array.from({ length: cfg.times }, (_, i) => (cfg.goleiroFixo ? (goleiros[i]?.id ?? null) : null));
