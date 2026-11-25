@@ -5,9 +5,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import SomTelao from "@/components/SomTelao";
 import QRCode from "qrcode";
 import { criarClienteSupabase } from "@/lib/supabase/client";
-import { carregarElenco, nomeCurto, type Membro, type Pelada } from "@/lib/pelada";
+import { nomeCurto, type Membro, type Pelada, elencoRapido } from "@/lib/pelada";
 import { eventoAtual, carregarSorteios, CORES_TIMES, NOMES_TIMES, type SorteioSalvo } from "@/lib/evento";
-import { calcularFila, formatarRelogio, medirDiferencaRelogio, segundosRolando, type Lance, type Partida } from "@/lib/partida";
+import { calcularFila, resumoFila, formatarRelogio, medirDiferencaRelogio, segundosRolando, type Lance, type Partida } from "@/lib/partida";
 import { corLegivel } from "@/lib/cores";
 
 type Dados = { eventoId: string; sorteio: SorteioSalvo | null; partidas: Partida[]; lances: Lance[] };
@@ -36,7 +36,7 @@ export default function TelaoTV({ pelada, link }: { pelada: Pelada; link: string
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     carregar();
-    carregarElenco(pelada.id, false).then(setElenco);
+    elencoRapido(pelada.id, setElenco);
     medirDiferencaRelogio().then(setDif);
     QRCode.toDataURL(link, { width: 360, margin: 1, color: { dark: "#1B1430", light: "#FFFFFF" } }).then(setQr).catch(() => {});
     const t = setInterval(() => setAgora(Date.now()), 250);
@@ -120,8 +120,7 @@ export default function TelaoTV({ pelada, link }: { pelada: Pelada; link: string
   const acabou = (partida.status === "rolando" || partida.status === "pausado") && (!!excedido || bateuGols);
   const times = dados.sorteio.times;
   const fila = calcularFila(times.length, dados.partidas, pelada.regra_empate);
-  const proximo = partida.status === "encerrada" ? fila.proximo : null;
-  const esperando = fila.espera;
+  const filaTxt = resumoFila(fila, partida.status === "encerrada");
 
   const vitorias = new Map<number, number>();
   for (const p of dados.partidas.filter((x) => x.status === "encerrada")) {
@@ -207,9 +206,10 @@ export default function TelaoTV({ pelada, link }: { pelada: Pelada; link: string
               ))}
             </div>
           </div>
-          <div className="rounded-[2vmin] bg-white/10 p-[2vmin] text-[3vmin]">
-            <div className="text-[2.2vmin] font-bold tracking-widest text-roxo-claro">{proximo ? "PRÓXIMO JOGO" : "ESPERANDO"}</div>
-            {proximo ? `${NOMES_TIMES[proximo[0]]} × ${NOMES_TIMES[proximo[1]]}` : esperando.length ? esperando.map((t) => NOMES_TIMES[t]).join(" · ") : "—"}
+          <div className="rounded-[2vmin] bg-white/10 p-[2vmin]">
+            <div className="text-[2.2vmin] font-bold tracking-widest text-roxo-claro">{filaTxt.titulo}</div>
+            <div className="font-display text-[4.4vmin] leading-tight font-bold">{filaTxt.principal}</div>
+            {filaTxt.sub && <div className="text-[2.4vmin] text-[#CFC7E0]">{filaTxt.sub}</div>}
           </div>
           {qr && (
             <div className="mt-auto flex items-center gap-[2vmin]">
@@ -222,7 +222,7 @@ export default function TelaoTV({ pelada, link }: { pelada: Pelada; link: string
       </main>
 
       <SomTelao
-        golId={ultimoGol?.id ?? null}
+        golCount={dados.lances.filter((l) => l.partida_id === partida.id && !l.desfeito).length}
         golNome={ultimoGol?.autor_id ? nome(ultimoGol.autor_id) : null}
         golContra={ultimoGol?.tipo === "gol_contra"}
         tempoAcabou={acabou}

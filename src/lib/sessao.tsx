@@ -34,6 +34,7 @@ export type PeladaResumo = {
   plano?: string | null;
   recursos?: Record<string, boolean> | null;
   plano_ate?: string | null;
+  lista_app?: boolean; // (SQL 0007)
 };
 
 export type Vinculo = { membro_id: string; papel: "admin" | "jogador"; pelada: PeladaResumo };
@@ -56,6 +57,9 @@ const Contexto = createContext<Sessao | null>(null);
 // "*" pra funcionar antes e depois dos SQLs novos (colunas de cor e plano).
 const CAMPOS_PELADA = "*";
 
+// Liga a conta aos nomes que o admin cadastrou com o e-mail dela (uma vez por login; SQL 0007).
+const jaVinculou = new Set<string>();
+
 export function SessaoProvider({ children }: { children: ReactNode }) {
   const [carregando, setCarregando] = useState(true);
   const [usuario, setUsuario] = useState<User | null>(null);
@@ -73,6 +77,10 @@ export function SessaoProvider({ children }: { children: ReactNode }) {
       return;
     }
     const sb = criarClienteSupabase();
+    if (!jaVinculou.has(u.id)) {
+      jaVinculou.add(u.id);
+      await sb.rpc("vincular_minha_conta");
+    }
     const [{ data: p }, { data: m }] = await Promise.all([
       sb.from("profiles").select("*").eq("id", u.id).maybeSingle(),
       sb.from("membros").select(`id, papel, peladas(${CAMPOS_PELADA})`).eq("profile_id", u.id).eq("ativo", true),

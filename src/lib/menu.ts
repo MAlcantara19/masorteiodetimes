@@ -17,6 +17,7 @@ export function montarMenu(atual: PeladaResumo | null, admin: boolean, ehMaster:
   if (atual && b) {
     jogador.push(
       { id: "jogo", href: `${b}/jogo`, titulo: "Partida", sub: "cronômetro e placar ao vivo", icone: "partida" },
+      ...(atual.lista_app ? [{ id: "listaapp", href: `/p/${atual.slug}/lista`, titulo: "Lista da semana", sub: "põe ou tira seu nome", icone: "lista" as const }] : []),
       { id: "aovivo", href: `/p/${atual.slug}/ao-vivo`, titulo: "Link ao vivo", sub: "placar e artilharia pra todos", icone: "link" },
       { id: "telao", href: `/p/${atual.slug}/telao`, titulo: "Telão", sub: "placar gigante na TV da quadra", icone: "tela" },
       { id: "campeonato", href: `${b}/campeonato`, titulo: "Campeonato", sub: "melhores da semana e do mês", icone: "trofeu" },

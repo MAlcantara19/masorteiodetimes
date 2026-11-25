@@ -8,7 +8,7 @@ import { useRouter } from "next/navigation";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { useSessao } from "@/lib/sessao";
 import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
-import { montarSorteio, notaReserva } from "@/lib/montar-sorteio";
+import { chaveApagados, montarSorteio, notaReserva } from "@/lib/montar-sorteio";
 import { montarTextoLista } from "@/lib/lista";
 import {
   carregarPresencas,
@@ -202,7 +202,17 @@ export default function SortearPage() {
     // Sortear do zero: apaga os sorteios não oficiais e começa do 1.
     const antigos = await carregarSorteios(evento.id);
     const manter = antigos.filter((s) => s.oficial);
-    if (antigos.length > manter.length) await sb.from("sorteios").delete().eq("evento_id", evento.id).eq("oficial", false);
+    if (antigos.length > manter.length) {
+      // Guarda os que vão ser apagados, pra dar "Desfazer" na tela dos times.
+      try {
+        window.localStorage.setItem(chaveApagados(evento.id), JSON.stringify(antigos.filter((s) => !s.oficial).map((s) => ({ numero: s.numero, times: s.times, goleiros: s.goleiros, espera: s.espera }))));
+      } catch {}
+      await sb.from("sorteios").delete().eq("evento_id", evento.id).eq("oficial", false);
+    } else {
+      try {
+        window.localStorage.removeItem(chaveApagados(evento.id));
+      } catch {}
+    }
     const numero = manter.length ? Math.max(...manter.map((s) => s.numero)) + 1 : 1;
     const { error } = await sb.from("sorteios").insert({ evento_id: evento.id, numero, times: r.times, goleiros: r.goleiros, espera: r.espera, criado_por: usuario.id });
     setSorteando(false);

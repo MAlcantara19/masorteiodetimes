@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { useSessao } from "@/lib/sessao";
-import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
+import { nomeCurto, usePelada, type Membro, elencoRapido } from "@/lib/pelada";
 import { eventoAtual, ultimoEvento, CORES_TIMES, NOMES_TIMES, type Evento } from "@/lib/evento";
 import { calcularEstatisticas, calcularPremios, carregarPeriodo, duracaoTexto, temposDoDia, vencedorDe, type DadosPeriodo } from "@/lib/estatisticas";
 import { curtaDia, DIAS, deIso, horaDe } from "@/lib/datas";
@@ -37,7 +37,7 @@ export default function FimPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     carregar();
-    if (pelada) carregarElenco(pelada.id, false).then(setElenco);
+    if (pelada) elencoRapido(pelada.id, setElenco);
   }, [carregar, pelada]);
 
   const porId = useMemo(() => new Map(elenco.map((m) => [m.id, m])), [elenco]);

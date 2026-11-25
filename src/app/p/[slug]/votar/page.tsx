@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { useSessao } from "@/lib/sessao";
-import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
+import { nomeCurto, usePelada, type Membro, elencoRapido } from "@/lib/pelada";
 import { carregarPresencas, carregarSorteios, type Evento } from "@/lib/evento";
 import { curtaDia, horaDe } from "@/lib/datas";
 import { Carregando } from "@/components/Topo";
@@ -77,7 +77,7 @@ export default function VotarPage() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!carregando) carregar();
-    if (pelada) carregarElenco(pelada.id, false).then(setElenco);
+    if (pelada) elencoRapido(pelada.id, setElenco);
   }, [carregar, carregando, pelada]);
 
   const porId = useMemo(() => new Map(elenco.map((m) => [m.id, m])), [elenco]);

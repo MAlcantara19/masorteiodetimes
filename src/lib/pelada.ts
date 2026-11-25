@@ -26,6 +26,12 @@ export type Pelada = {
   pix_nome?: string | null;
   pix_cidade?: string | null;
   valor_diaria?: number | null; // (SQL 0006) quem paga por pelada
+  lista_app?: boolean; // (SQL 0007) lista da semana no app
+  lista_vagas?: number;
+  lista_espera?: number;
+  lista_goleiros?: number;
+  lista_abre_dia?: number | null;
+  lista_abre_hora?: string | null;
   cor_secundaria?: string | null; // (SQL 0004)
   camisa_estilo?: string | null;
   plano?: string | null;
@@ -60,6 +66,7 @@ export type Membro = {
   convidado: boolean;
   ativo: boolean;
   nascimento?: string | null; // "AAAA-MM-DD" (SQL 0003)
+  mensalista?: boolean; // (SQL 0007) entra direto na lista toda semana
   nota?: Nota | null; // só vem pra admin (RLS)
 };
 
@@ -140,13 +147,46 @@ export async function carregarElenco(peladaId: string, comNotas: boolean): Promi
   const sb = criarClienteSupabase();
   const base = "id, pelada_id, profile_id, nome, apelido, papel, posicao, sabe_marcar, goleiro, convidado, ativo";
   const notas = comNotas ? ", nota:notas(nota_simples, atributos, usar_completa)" : "";
-  let { data, error } = await sb.from("membros").select(`${base}, apelidos, nascimento${notas}`).eq("pelada_id", peladaId).order("nome");
+  let { data, error } = await sb.from("membros").select(`${base}, apelidos, nascimento, mensalista${notas}`).eq("pelada_id", peladaId).order("nome");
+  // Sem o SQL 0007 (mensalista), tenta sem essa coluna.
+  if (error) ({ data, error } = await sb.from("membros").select(`${base}, apelidos, nascimento${notas}`).eq("pelada_id", peladaId).order("nome"));
   // Sem o SQL 0003 (nascimento), tenta só com os apelidos (SQL 0002).
   if (error) ({ data, error } = await sb.from("membros").select(`${base}, apelidos${notas}`).eq("pelada_id", peladaId).order("nome"));
   // Se o SQL novo (apelidos) ainda não foi rodado no Supabase, carrega sem essa coluna.
   if (error) ({ data, error } = await sb.from("membros").select(`${base}${notas}`).eq("pelada_id", peladaId).order("nome"));
-  return ((data ?? []) as unknown as Membro[]).map((m) => ({
+  // Sem internet: usa o elenco guardado neste aparelho.
+  if (error || !data) return elencoGuardado(peladaId) ?? [];
+  const lista = ((data ?? []) as unknown as Membro[]).map((m) => ({
     ...m,
     nota: Array.isArray(m.nota) ? (m.nota[0] ?? null) : (m.nota ?? null),
   }));
+  guardarElenco(peladaId, lista);
+  return lista;
+}
+
+// Elenco guardado no aparelho (sem as notas, que nunca ficam salvas fora do banco).
+const chaveElenco = (peladaId: string) => `masorteio:elenco-membros:${peladaId}`;
+
+function guardarElenco(peladaId: string, lista: Membro[]) {
+  try {
+    window.localStorage.setItem(chaveElenco(peladaId), JSON.stringify(lista.map((m) => ({ ...m, nota: null }))));
+  } catch {}
+}
+
+export function elencoGuardado(peladaId: string): Membro[] | null {
+  try {
+    const raw = window.localStorage.getItem(chaveElenco(peladaId));
+    return raw ? (JSON.parse(raw) as Membro[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+// Mostra na hora o elenco guardado e depois troca pelo do banco (a tela abre rápido mesmo com internet ruim).
+export function elencoRapido(peladaId: string, aoTer: (el: Membro[]) => void) {
+  const guardado = elencoGuardado(peladaId);
+  if (guardado?.length) aoTer(guardado);
+  carregarElenco(peladaId, false).then((el) => {
+    if (el.length || !guardado?.length) aoTer(el);
+  });
 }

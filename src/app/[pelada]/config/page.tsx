@@ -1,5 +1,6 @@
 "use client";
 // Configuração da pelada (admin): dados, logo e o PIN do dia pro ao vivo.
+import ConfigLista from "@/components/ConfigLista";
 import { useCallback, useEffect, useState } from "react";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { useSessao } from "@/lib/sessao";
@@ -200,6 +201,8 @@ export default function ConfigPage() {
           </button>
         </div>
       </section>
+
+      <ConfigLista key={`lista-${pelada.id}`} pelada={pelada} aoSalvar={() => { recarregar(); recarregarSessao(); setAviso("Lista salva!"); }} />
 
       <ConfigPix pelada={pelada} aoSalvar={() => { recarregar(); setAviso("Pix salvo!"); }} />
 

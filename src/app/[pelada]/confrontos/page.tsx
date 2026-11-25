@@ -3,7 +3,7 @@
 // frente a frente entre dois jogadores, fregueses e carrascos. Nunca mostra notas.
 import { useEffect, useMemo, useState } from "react";
 import { useSessao } from "@/lib/sessao";
-import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
+import { nomeCurto, usePelada, type Membro, elencoRapido } from "@/lib/pelada";
 import { carregarPeriodo, type DadosPeriodo } from "@/lib/estatisticas";
 import { caemJuntas, duplas, frenteAFrente, relacoes, type Placar } from "@/lib/confrontos";
 import { inicioMes, isoDia } from "@/lib/datas";
@@ -39,7 +39,7 @@ export default function ConfrontosPage() {
 
   useEffect(() => {
     if (!pelada || !pode) return;
-    carregarElenco(pelada.id, false).then(setElenco);
+    elencoRapido(pelada.id, setElenco);
   }, [pelada, pode]);
 
   useEffect(() => {

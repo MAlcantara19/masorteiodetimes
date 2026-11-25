@@ -2,7 +2,7 @@
 // Retrospectiva do ano (estilo "Wrapped"): o ano da pelada e o ano de cada jogador,
 // com um card em formato de story pra baixar e postar. Sem nota/estrelas, só jogo.
 import { useEffect, useMemo, useRef, useState } from "react";
-import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
+import { nomeCurto, usePelada, type Membro, elencoRapido } from "@/lib/pelada";
 import { useSessao } from "@/lib/sessao";
 import { calcularEstatisticas, carregarPeriodo, lideres, premioPorDias, vencedorDe, type DadosPeriodo } from "@/lib/estatisticas";
 import { curtaDia } from "@/lib/datas";
@@ -82,7 +82,7 @@ export default function RetrospectivaPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setD(null);
     carregarPeriodo(pelada.id, `${ano}-01-01`, `${ano}-12-31`).then(setD);
-    carregarElenco(pelada.id, false).then(setElenco);
+    elencoRapido(pelada.id, setElenco);
   }, [pelada, ano]);
 
   const meu = vinculos.find((v) => v.pelada.id === pelada?.id)?.membro_id ?? "";

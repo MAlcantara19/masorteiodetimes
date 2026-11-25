@@ -37,6 +37,7 @@ type Rascunho = {
   goleiro: boolean;
   convidado: boolean;
   ativo: boolean;
+  mensalista: boolean; // (SQL 0007) entra direto na lista da semana
   nota: number;
   modo: "simples" | "completa";
   atributos: Atributos;
@@ -48,7 +49,7 @@ type Rascunho = {
 
 function novoRascunho(): Rascunho {
   return {
-    id: null, nome: "", apelido: "", posicao: "Q", sabe_marcar: false, goleiro: false, convidado: false, ativo: true,
+    id: null, nome: "", apelido: "", posicao: "Q", sabe_marcar: false, goleiro: false, convidado: false, ativo: true, mensalista: false,
     nota: 3, modo: "simples", atributos: { ...ATRIBUTOS_PADRAO }, email: "", profile_id: null, apelidos: "", nascimento: "",
   };
 }
@@ -103,10 +104,17 @@ export default function JogadoresPage() {
     const n = m.nota;
     setEdit({
       id: m.id, nome: m.nome, apelido: m.apelido ?? "", posicao: m.posicao, sabe_marcar: m.sabe_marcar, goleiro: m.goleiro,
-      convidado: m.convidado, ativo: m.ativo, nota: n ? Number(n.nota_simples) : 3,
+      convidado: m.convidado, ativo: m.ativo, mensalista: !!m.mensalista, nota: n ? Number(n.nota_simples) : 3,
       modo: n?.usar_completa ? "completa" : "simples", atributos: n?.atributos ?? { ...ATRIBUTOS_PADRAO },
       email: "", profile_id: m.profile_id, apelidos: (m.apelidos ?? []).join(", "), nascimento: m.nascimento ?? "",
     });
+    // E-mail do Google guardado pra ligar a conta (SQL 0007; só admin vê).
+    criarClienteSupabase()
+      .from("membros_email")
+      .select("email")
+      .eq("membro_id", m.id)
+      .maybeSingle()
+      .then(({ data }) => data?.email && setEdit((e) => (e && e.id === m.id && !e.email ? { ...e, email: data.email } : e)));
   }
 
   async function salvar() {
@@ -115,13 +123,12 @@ export default function JogadoresPage() {
     setSalvando(true);
     const sb = criarClienteSupabase();
     let profileId = edit.profile_id;
+    let esperandoLogin = false;
     if (edit.email.trim()) {
       const { data } = await sb.rpc("buscar_perfil", { p_email: edit.email.trim() });
-      if (!data?.length) {
-        setSalvando(false);
-        return setAviso("Ninguém com esse e-mail entrou no app ainda. Peça pra pessoa entrar uma vez com o Google.");
-      }
-      profileId = data[0].id;
+      // Ainda não entrou no app: guarda o e-mail e a conta liga sozinha no primeiro login com ele.
+      if (data?.length) profileId = data[0].id;
+      else esperandoLogin = true;
     }
     const dados = {
       pelada_id: pelada.id, nome: edit.nome.trim(), apelido: edit.apelido.trim() || null, posicao: edit.posicao,
@@ -138,6 +145,15 @@ export default function JogadoresPage() {
       setSalvando(false);
       return setAviso(res.error?.code === "23505" ? "Essa pessoa já está no elenco." : "Não deu pra salvar.");
     }
+    // Mensalista e e-mail do Google (SQL 0007: antes dele, só não salva essas duas coisas).
+    await sb.from("membros").update({ mensalista: edit.mensalista }).eq("id", res.data.id);
+    const emailRes = edit.email.trim()
+      ? await sb.from("membros_email").upsert({ membro_id: res.data.id, email: edit.email.trim().toLowerCase() })
+      : await sb.from("membros_email").delete().eq("membro_id", res.data.id);
+    if (esperandoLogin && emailRes.error) {
+      setSalvando(false);
+      return setAviso("Ninguém com esse e-mail entrou no app ainda. Rode o SQL 0007 no Supabase pra guardar o e-mail e ligar a conta sozinha depois.");
+    }
     const completa = edit.modo === "completa";
     await sb.from("notas").upsert({
       membro_id: res.data.id,
@@ -149,7 +165,7 @@ export default function JogadoresPage() {
     });
     setSalvando(false);
     setEdit(null);
-    setAviso(null);
+    setAviso(esperandoLogin ? "Salvo! Quando ele entrar no app com esse e-mail do Google, a conta liga sozinha." : null);
     recarregar();
   }
 
@@ -324,6 +340,7 @@ export default function JogadoresPage() {
                 [
                   ["sabe_marcar", "Sabe marcar"],
                   ["goleiro", "É goleiro"],
+                  ["mensalista", "Mensalista (já entra na lista toda semana)"],
                   ["convidado", "Convidado (não é fixo)"],
                   ["ativo", "Ativo no elenco"],
                 ] as const

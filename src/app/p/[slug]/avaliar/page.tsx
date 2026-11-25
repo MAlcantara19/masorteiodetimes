@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { useSessao } from "@/lib/sessao";
-import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
+import { nomeCurto, usePelada, type Membro, elencoRapido } from "@/lib/pelada";
 import { carregarSorteios, ultimoEvento, CORES_TIMES, NOMES_TIMES, type Evento, type SorteioSalvo } from "@/lib/evento";
 import { curtaDia } from "@/lib/datas";
 import { Escolha } from "@/components/Folha";
@@ -40,7 +40,7 @@ export default function AvaliarPage() {
         if (window.localStorage.getItem(`masorteio:avaliou:${ev.id}`)) setEnviado(true);
       } catch {}
     });
-    carregarElenco(pelada.id, false).then(setElenco);
+    elencoRapido(pelada.id, setElenco);
   }, [pelada]);
 
   const porId = useMemo(() => new Map(elenco.map((m) => [m.id, m])), [elenco]);

@@ -23,7 +23,8 @@ import { curtaDia, DIAS, deIso } from "@/lib/datas";
 import CardTimes, { type TimeCard } from "@/components/CardTimes";
 import { Escolha } from "@/components/Folha";
 import Topo, { Carregando } from "@/components/Topo";
-import { ehReserva, montarSorteio } from "@/lib/montar-sorteio";
+import { chaveApagados, duplasDe, ehReserva, montarSorteio, ultimoSorteioAntes } from "@/lib/montar-sorteio";
+import { chaveDupla } from "@/lib/sorteio";
 
 export default function TimesPage() {
   const router = useRouter();
@@ -44,6 +45,10 @@ export default function TimesPage() {
   // Trocando quem está nessa posição por alguém de fora (time, posição).
   const [trocando, setTrocando] = useState<[number, number] | null>(null);
   const [nomeNovo, setNomeNovo] = useState("");
+  // Sorteios que o último "Sortear" apagou (pra desfazer) e a pelada anterior (pra comparar).
+  const [apagados, setApagados] = useState<{ numero: number; times: string[][]; goleiros: (string | null)[] | null; espera: string[] | null }[]>([]);
+  const [anterior, setAnterior] = useState<{ data: string; times: string[][] } | null | undefined>(undefined);
+  const [comparando, setComparando] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const todosRef = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -60,6 +65,14 @@ export default function TimesPage() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!carregando) carregar();
   }, [carregar, carregando]);
+
+  useEffect(() => {
+    if (!evento || !admin) return;
+    try {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setApagados(JSON.parse(window.localStorage.getItem(chaveApagados(evento.id)) ?? "[]"));
+    } catch {}
+  }, [evento, admin]);
 
   const porId = useMemo(() => new Map(elenco.map((m) => [m.id, m])), [elenco]);
   const modo = slug ? lerConfig(slug).modo : "simples";
@@ -202,6 +215,28 @@ export default function TimesPage() {
       setAtual(sorteios.length);
       setSel(null);
     }
+  }
+
+  // Volta os sorteios de antes do último "Sortear" (e tira os novos que não são oficiais).
+  async function desfazerSorteio() {
+    if (!evento || !usuario || !apagados.length) return;
+    if (!confirm("Voltar pros sorteios de antes? Os sorteios novos (não oficiais) somem.")) return;
+    setOcupado(true);
+    const sb = criarClienteSupabase();
+    await sb.from("sorteios").delete().eq("evento_id", evento.id).eq("oficial", false);
+    await sb.from("sorteios").insert(apagados.map((x) => ({ evento_id: evento.id, numero: x.numero, times: x.times, goleiros: x.goleiros, espera: x.espera, criado_por: usuario.id })));
+    try {
+      window.localStorage.removeItem(chaveApagados(evento.id));
+    } catch {}
+    setApagados([]);
+    setAtual(0);
+    setOcupado(false);
+    carregar();
+  }
+
+  async function comparar() {
+    setComparando(!comparando);
+    if (anterior === undefined && pelada && evento) setAnterior(await ultimoSorteioAntes(pelada.id, evento.data));
   }
 
   async function fechar(i: number) {
@@ -426,8 +461,64 @@ export default function TimesPage() {
         </section>
       )}
 
+      {admin && comparando && (
+        <section className="flex flex-col gap-2 rounded-2xl border border-borda bg-white p-4 text-sm">
+          {anterior === undefined ? (
+            <span className="text-apagado">Buscando a pelada anterior…</span>
+          ) : !anterior ? (
+            <span className="text-apagado">Não achei sorteio da pelada anterior.</span>
+          ) : (
+            (() => {
+              const antes = duplasDe(anterior.times);
+              const nm = (id: string) => (porId.get(id) ? nomeCurto(porId.get(id) as Membro) : "?");
+              const repetidas = s.times.map((t) => {
+                const r: string[] = [];
+                for (let a = 0; a < t.length; a++) for (let b = a + 1; b < t.length; b++) if (antes.has(chaveDupla(t[a], t[b]))) r.push(`${nm(t[a])} + ${nm(t[b])}`);
+                return r;
+              });
+              const total = repetidas.reduce((x, r) => x + r.length, 0);
+              return (
+                <>
+                  <span className="font-semibold">Pelada anterior ({curtaDia(anterior.data)}) · só admins veem</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {anterior.times.map((t, i) => (
+                      <div key={i} className="rounded-xl bg-fundo p-2">
+                        <div className="text-xs font-bold text-apagado">{NOMES_TIMES[i]}</div>
+                        {t.map((id) => (
+                          <div key={id} className="truncate">
+                            {nm(id)}
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                  </div>
+                  <span className={total ? "font-semibold text-alerta-escuro" : "font-semibold text-zap"}>
+                    {total ? `${total} ${total === 1 ? "dupla repetida" : "duplas repetidas"} no Sorteio ${idx + 1}:` : `Nenhuma dupla repetida no Sorteio ${idx + 1}.`}
+                  </span>
+                  {repetidas.map((r, i) =>
+                    r.length ? (
+                      <span key={i} className="text-apagado">
+                        {NOMES_TIMES[i]}: {r.join(" · ")}
+                      </span>
+                    ) : null,
+                  )}
+                </>
+              );
+            })()
+          )}
+        </section>
+      )}
+
       {admin && (
         <div className="flex flex-wrap gap-2">
+          <button type="button" onClick={comparar} className={`h-9 rounded-full px-3 text-sm font-semibold ${comparando ? "bg-noite text-white" : "border border-borda bg-white"}`}>
+            Comparar com a anterior
+          </button>
+          {apagados.length > 0 && (
+            <button type="button" onClick={desfazerSorteio} disabled={ocupado} className="h-9 rounded-full border border-alerta px-3 text-sm font-semibold text-alerta-escuro">
+              Desfazer o último Sortear
+            </button>
+          )}
           <button type="button" onClick={desfazer} disabled={!historico.length} className="h-9 rounded-full border border-borda bg-white px-3 text-sm font-semibold disabled:opacity-40">
             Desfazer troca
           </button>

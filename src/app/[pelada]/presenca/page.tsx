@@ -3,7 +3,7 @@
 // e (só pro admin) quem sumiu, com a mensagem pronta pro Zap.
 import { useEffect, useMemo, useState } from "react";
 import { useSessao } from "@/lib/sessao";
-import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
+import { nomeCurto, usePelada, type Membro, elencoRapido } from "@/lib/pelada";
 import { carregarPeriodo, filtrarPeriodo, presentesPorDia, type DadosPeriodo } from "@/lib/estatisticas";
 import { curtaDia, DIAS, inicioMes, isoDia, proximaPelada } from "@/lib/datas";
 import { linkZap } from "@/lib/resumo-zap";
@@ -22,7 +22,7 @@ export default function PresencaPage() {
 
   useEffect(() => {
     if (!pelada) return;
-    carregarElenco(pelada.id, false).then(setElenco);
+    elencoRapido(pelada.id, setElenco);
     carregarPeriodo(pelada.id).then(setTudo);
   }, [pelada]);
 

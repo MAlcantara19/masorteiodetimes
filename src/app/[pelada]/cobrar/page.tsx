@@ -6,8 +6,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { useSessao } from "@/lib/sessao";
-import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
-import { curtaDia, inicioMes, nomeMes } from "@/lib/datas";
+import { nomeCurto, usePelada, type Membro, elencoRapido } from "@/lib/pelada";
+import { curtaDia, inicioMes, isoDia, nomeMes } from "@/lib/datas";
 import { gerarPix } from "@/lib/pix";
 import { linkZap } from "@/lib/resumo-zap";
 import { Escolha } from "@/components/Folha";
@@ -55,7 +55,7 @@ export default function CobrarPage() {
   useEffect(() => {
     if (!pelada || !admin) return;
     const sb = criarClienteSupabase();
-    carregarElenco(pelada.id, false).then(setElenco);
+    elencoRapido(pelada.id, setElenco);
     sb.from("pagamentos")
       .select("membro_id, pago")
       .eq("pelada_id", pelada.id)
@@ -63,7 +63,7 @@ export default function CobrarPage() {
       .then(({ data }) => setPagos(new Set((data ?? []).filter((p) => p.pago).map((p) => p.membro_id))));
     // Convidados da última pelada que teve jogo (quem costuma pagar a diária).
     (async () => {
-      const { data: evs } = await sb.from("eventos").select("id, data").eq("pelada_id", pelada.id).neq("status", "cancelado").lte("data", new Date().toISOString().slice(0, 10)).order("data", { ascending: false }).limit(1);
+      const { data: evs } = await sb.from("eventos").select("id, data").eq("pelada_id", pelada.id).neq("status", "cancelado").lte("data", isoDia(new Date())).order("data", { ascending: false }).limit(1);
       const ev = evs?.[0];
       if (!ev) return;
       const { data: pr } = await sb.from("presencas").select("membro_id").eq("evento_id", ev.id).eq("status", "confirmado");

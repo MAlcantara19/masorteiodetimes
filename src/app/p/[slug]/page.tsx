@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import { useSessao } from "@/lib/sessao";
-import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
+import { nomeCurto, usePelada, type Membro, elencoRapido } from "@/lib/pelada";
 import { calcularEstatisticas, calcularPremios, carregarPeriodo, premioPorDias, type DadosPeriodo } from "@/lib/estatisticas";
 import { DIAS, horaCurta, inicioMes, isoDia, nomeMes } from "@/lib/datas";
 import { textoRegra } from "@/lib/partida";
@@ -25,7 +25,7 @@ export default function PaginaPublica() {
   useEffect(() => {
     if (!pelada) return;
     carregarPeriodo(pelada.id, inicioMes(), isoDia(new Date())).then(setD);
-    carregarElenco(pelada.id, false).then(setElenco);
+    elencoRapido(pelada.id, setElenco);
   }, [pelada]);
 
   useEffect(() => {

@@ -3,7 +3,7 @@
 // Artilheiros, garçons, quem mais jogou, recordes e o artilheiro de cada mês. Nunca mostra notas.
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
+import { nomeCurto, usePelada, type Membro, elencoRapido } from "@/lib/pelada";
 import { calcularEstatisticas, carregarPeriodo, vencedorDe, type DadosPeriodo, type Linha } from "@/lib/estatisticas";
 import { curtaDia, deIso, nomeMes } from "@/lib/datas";
 import { NOMES_TIMES } from "@/lib/evento";
@@ -38,7 +38,7 @@ export default function HallDaFamaPage() {
 
   useEffect(() => {
     if (!pelada) return;
-    carregarElenco(pelada.id, false).then(setElenco);
+    elencoRapido(pelada.id, setElenco);
     carregarPeriodo(pelada.id).then(setD);
   }, [pelada]);
 

@@ -18,7 +18,7 @@ function ler(): Prefs {
 }
 
 type Props = {
-  golId: string | null;
+  golCount: number; // quantos gols tem o jogo agora (só narra quando aumenta: desfazer não narra de novo)
   golNome: string | null; // quem fez (null = sem autor)
   golContra: boolean;
   tempoAcabou: boolean;
@@ -26,10 +26,11 @@ type Props = {
   variante?: "tv" | "celular";
 };
 
-export default function SomTelao({ golId, golNome, golContra, tempoAcabou, partidaId, variante = "tv" }: Props) {
+export default function SomTelao({ golCount, golNome, golContra, tempoAcabou, partidaId, variante = "tv" }: Props) {
   const [p, setP] = useState<Prefs>(ler);
   const [musica, setMusica] = useState(false);
-  const ultimoGol = useRef(golId);
+  // Maior número de gols já visto neste jogo (começa no que já tinha quando abriu a tela).
+  const visto = useRef({ partidaId, n: golCount });
   const apitou = useRef<string | null>(tempoAcabou ? partidaId : null);
 
   function mudar(n: Partial<Prefs>) {
@@ -41,12 +42,16 @@ export default function SomTelao({ golId, golNome, golContra, tempoAcabou, parti
     } catch {}
   }
 
-  // Gol novo (não o que já estava quando abriu a tela).
+  // Gol novo: o placar de gols do jogo passou do maior já visto (trocar de jogo ou desfazer não narra).
   useEffect(() => {
-    if (!golId || golId === ultimoGol.current) return;
-    ultimoGol.current = golId;
+    if (visto.current.partidaId !== partidaId) {
+      visto.current = { partidaId, n: golCount };
+      return;
+    }
+    if (golCount <= visto.current.n) return;
+    visto.current.n = golCount;
     if (p.narrar) narrarGol(golNome, golContra);
-  }, [golId, golNome, golContra, p.narrar]);
+  }, [golCount, partidaId, golNome, golContra, p.narrar]);
 
   // Acabou o tempo: apita uma vez por jogo.
   useEffect(() => {

@@ -2,6 +2,7 @@
 // Regras da partida ao vivo: tempo calculado pelo banco, fila "quem ganha fica" e envio das ações.
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import type { Pelada } from "@/lib/pelada";
+import { NOMES_TIMES } from "@/lib/evento";
 
 export type Partida = {
   id: string;
@@ -80,6 +81,19 @@ export function textoRegra(p: Pick<Pelada, "regra_fim" | "minutos" | "gols_limit
 // ---------- Fila "quem ganha fica" ----------
 
 export type Fila = { proximo: [number, number] | null; espera: number[] };
+
+// Como mostrar a fila: com jogo rolando, quem entra no próximo (contra quem ganhar) e quem vem depois;
+// com o jogo encerrado, o próximo confronto.
+export function resumoFila(fila: Fila, encerrada: boolean): { titulo: string; principal: string; sub: string | null } {
+  const nomes = (ts: number[]) => ts.map((t) => NOMES_TIMES[t]).join(", ");
+  if (encerrada && fila.proximo) {
+    return { titulo: "PRÓXIMO JOGO", principal: `${NOMES_TIMES[fila.proximo[0]]} × ${NOMES_TIMES[fila.proximo[1]]}`, sub: fila.espera.length ? `Depois: ${nomes(fila.espera)}` : null };
+  }
+  if (fila.espera.length) {
+    return { titulo: "PRÓXIMO A ENTRAR", principal: NOMES_TIMES[fila.espera[0]], sub: `contra quem ganhar${fila.espera.length > 1 ? ` · depois: ${nomes(fila.espera.slice(1))}` : ""}` };
+  }
+  return { titulo: "PRÓXIMO", principal: "—", sub: null };
+}
 
 // Refaz a fila a partir dos jogos já encerrados. `regra` = o que fazer no empate.
 export function calcularFila(qtdTimes: number, partidas: Partida[], regra: Pelada["regra_empate"]): Fila {

@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { criarClienteSupabase } from "@/lib/supabase/client";
-import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
+import { nomeCurto, usePelada, type Membro, elencoRapido } from "@/lib/pelada";
 import { calcularEstatisticas, premioPorDias, type Linha } from "@/lib/estatisticas";
 import { carregarCartas, carregarPerfisPublicos, cartaFinal, posicaoCarta, rotuloEvento, selosCarta, statsCarta, type InfoCarta, type PerfilPublico } from "@/lib/cartas";
 import { curtaDia } from "@/lib/datas";
@@ -39,7 +39,7 @@ export default function JogadorPage() {
 
   useEffect(() => {
     if (!pelada) return;
-    carregarElenco(pelada.id, false).then(setElenco);
+    elencoRapido(pelada.id, setElenco);
     carregarCartas(pelada.id).then(({ cartas: c, temporada }) => {
       setCartas(c);
       setEst(calcularEstatisticas(temporada));

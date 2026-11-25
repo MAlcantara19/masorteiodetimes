@@ -40,26 +40,38 @@ async function garantirReservas(peladaId: string, n: number, elenco: Membro[], n
   return todos.map((m) => ({ ...m, nota: { nota_simples: nota, atributos: null, usar_completa: false } }));
 }
 
-// Duplas que caíram no mesmo time no sorteio oficial da última pelada antes desta data.
-async function duplasDaUltima(peladaId: string, antesDe: string): Promise<Set<string>> {
+// O sorteio oficial (ou o último) da pelada anterior a esta data.
+export async function ultimoSorteioAntes(peladaId: string, antesDe: string): Promise<{ data: string; times: string[][] } | null> {
   const { data } = await criarClienteSupabase()
     .from("eventos")
-    .select("id")
+    .select("id, data")
     .eq("pelada_id", peladaId)
     .lt("data", antesDe)
     .neq("status", "cancelado")
     .order("data", { ascending: false })
     .limit(3);
-  for (const ev of (data ?? []) as { id: string }[]) {
+  for (const ev of (data ?? []) as { id: string; data: string }[]) {
     const ss = await carregarSorteios(ev.id);
     const s = ss.find((x) => x.oficial) ?? ss[ss.length - 1];
-    if (!s) continue;
-    const pares = new Set<string>();
-    for (const t of s.times) for (let a = 0; a < t.length; a++) for (let b = a + 1; b < t.length; b++) pares.add(chaveDupla(t[a], t[b]));
-    return pares;
+    if (s) return { data: ev.data, times: s.times };
   }
-  return new Set();
+  return null;
 }
+
+export function duplasDe(times: string[][]): Set<string> {
+  const pares = new Set<string>();
+  for (const t of times) for (let a = 0; a < t.length; a++) for (let b = a + 1; b < t.length; b++) pares.add(chaveDupla(t[a], t[b]));
+  return pares;
+}
+
+// Duplas que caíram no mesmo time na última pelada antes desta data.
+async function duplasDaUltima(peladaId: string, antesDe: string): Promise<Set<string>> {
+  const u = await ultimoSorteioAntes(peladaId, antesDe);
+  return u ? duplasDe(u.times) : new Set();
+}
+
+// "Desfazer sorteio": guarda neste aparelho os sorteios que o "Sortear" apagou, pra poder voltar.
+export const chaveApagados = (eventoId: string) => `masorteio:sorteios-apagados:${eventoId}`;
 
 export async function montarSorteio(o: {
   peladaId: string;

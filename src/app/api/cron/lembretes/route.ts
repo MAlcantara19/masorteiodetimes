@@ -1,9 +1,12 @@
 // Lembretes automáticos. Um agendador (GitHub Actions, de hora em hora) chama esta rota com o CRON_SECRET.
 // - "Ainda não sorteou": X horas antes da pelada (lembrete_horas_antes), pros admins.
 // - "Amanhã tem pelada": no dia anterior, às 10h, pros admins colarem a lista.
+// - Lista no app (SQL 0007): 1 hora antes de abrir, lança a lista (com os mensalistas) e avisa "abre às 12:00";
+//   na hora de abrir, avisa "a lista abriu". A lista abre na hora certa mesmo se o aviso atrasar.
 import { NextResponse, type NextRequest } from "next/server";
 import { clienteAdmin } from "@/lib/supabase/server";
 import { enviarPara, perfisDaPelada } from "@/lib/push-servidor";
+import { aberturaDaLista, lancarLista, proximoDiaDaPelada } from "@/lib/lista-app";
 
 // Hora de Brasília (o servidor roda em UTC).
 function agoraSP() {
@@ -26,6 +29,36 @@ export async function GET(request: NextRequest) {
   const admin = clienteAdmin();
   const { data: peladas } = await admin.from("peladas").select("id, nome, slug, dia_semana, horario, lembrete_horas_antes").not("dia_semana", "is", null);
   const log: string[] = [];
+
+  // Lista no app: só as peladas que ligaram (sem o SQL 0007 essa consulta só volta vazia).
+  const { data: comLista } = await admin
+    .from("peladas")
+    .select("id, nome, slug, dia_semana, horario, lista_abre_dia, lista_abre_hora")
+    .eq("lista_app", true)
+    .not("lista_abre_dia", "is", null)
+    .not("dia_semana", "is", null);
+  const agoraMs = Date.now();
+  for (const p of comLista ?? []) {
+    const data = proximoDiaDaPelada(p, sp.data, sp.hora);
+    const abre = data ? aberturaDaLista(p, data) : null;
+    if (!data || !abre) continue;
+    const faltaMin = (abre.getTime() - agoraMs) / 60000;
+    const hhmm = String(p.lista_abre_hora).slice(0, 5);
+    // Uma hora antes: lança (mensalistas já entram) e avisa.
+    if (faltaMin > 0 && faltaMin <= 60) {
+      await lancarLista(admin, p, data, abre);
+      const ids = await perfisDaPelada(p.id);
+      const n = await enviarPara(ids, { titulo: `📋 Lista da ${p.nome}`, corpo: `A lista abre hoje às ${hhmm}. Fica ligado!`, url: `/p/${p.slug}/lista`, tag: `listaapp-${p.id}` }, origem);
+      log.push(`${p.nome}: lista abre às ${hhmm} (${n})`);
+    }
+    // Acabou de abrir (na rodada seguinte ao horário).
+    if (faltaMin <= 0 && faltaMin > -60) {
+      const r = await lancarLista(admin, p, data, abre);
+      const ids = await perfisDaPelada(p.id);
+      const n = await enviarPara(ids, { titulo: `✅ A lista da ${p.nome} abriu!`, corpo: "Corre pra pôr seu nome.", url: `/p/${p.slug}/lista`, tag: `listaapp-${p.id}` }, origem);
+      log.push(`${p.nome}: lista abriu (${n})${r?.nova ? " · lançada agora" : ""}`);
+    }
+  }
 
   for (const p of peladas ?? []) {
     const [h] = String(p.horario ?? "00:00").split(":").map(Number);

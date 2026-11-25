@@ -11,6 +11,7 @@ import { eventoAtual, carregarPresencas, carregarSorteios, CORES_TIMES, NOMES_TI
 import {
   acoesPendentes,
   calcularFila,
+  resumoFila,
   enviarAcao,
   guardarCache,
   lerCache,
@@ -707,7 +708,7 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
       {partida.status !== "encerrada" && (
         <SomTelao
           variante="celular"
-          golId={ultimoLance?.id ?? null}
+          golCount={dados.lances.filter((l) => l.partida_id === partida.id && !l.desfeito).length}
           golNome={ultimoLance?.autor_id ? nome(ultimoLance.autor_id) : null}
           golContra={ultimoLance?.tipo === "gol_contra"}
           tempoAcabou={acabou}
@@ -879,17 +880,25 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
           ))}
       </section>
 
-      {/* Fila */}
-      <section className="grid grid-cols-3 gap-2 text-center text-sm">
+      {/* Fila: quem entra no próximo jogo */}
+      {(() => {
+        const r = resumoFila(fila, partida.status === "encerrada");
+        return (
+          <section className="flex items-center gap-3 rounded-2xl border-2 border-roxo/30 bg-white px-4 py-3">
+            <span className="flex flex-col">
+              <span className="text-[11px] font-bold tracking-wider text-apagado">{r.titulo}</span>
+              <span className="font-display text-xl font-bold">{r.principal}</span>
+              {r.sub && <span className="text-[13px] text-apagado">{r.sub}</span>}
+            </span>
+          </section>
+        );
+      })()}
+      <section className="grid grid-cols-2 gap-2 text-center text-sm">
         <div className="rounded-2xl border border-borda bg-white p-3">
           <div className="text-[11px] font-bold tracking-wider text-apagado">EM CAMPO</div>
           <div className="font-semibold">
             {NOMES_TIMES[partida.time_a].replace("Time ", "T")} × {NOMES_TIMES[partida.time_b].replace("Time ", "T")}
           </div>
-        </div>
-        <div className="rounded-2xl border border-borda bg-white p-3">
-          <div className="text-[11px] font-bold tracking-wider text-apagado">PRÓXIMO</div>
-          <div className="font-semibold">{fila.espera.length ? NOMES_TIMES[fila.espera[0]] : "—"}</div>
         </div>
         <div className="rounded-2xl border border-borda bg-white p-3">
           <div className="text-[11px] font-bold tracking-wider text-apagado">VITÓRIAS HOJE</div>

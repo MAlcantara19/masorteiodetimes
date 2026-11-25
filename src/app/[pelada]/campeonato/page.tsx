@@ -3,7 +3,7 @@
 // disputa dos goleiros (quem é de linha e foi pro gol aparece separado) e recordes.
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
+import { nomeCurto, usePelada, type Membro, elencoRapido } from "@/lib/pelada";
 import { calcularEstatisticas, carregarPeriodo, lideres, premioPorDias, type DadosPeriodo, type Linha } from "@/lib/estatisticas";
 import { curtaDia, inicioMes, inicioSemana, isoDia, nomeMes, deIso } from "@/lib/datas";
 import { Escolha } from "@/components/Folha";
@@ -45,7 +45,7 @@ export default function CampeonatoPage() {
 
   useEffect(() => {
     if (!pelada) return;
-    carregarElenco(pelada.id, false).then(setElenco);
+    elencoRapido(pelada.id, setElenco);
     carregarPeriodo(pelada.id).then(setHistorico);
   }, [pelada]);
 
