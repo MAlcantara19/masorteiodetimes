@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { Analytics } from "@vercel/analytics/next";
 import { SessaoProvider } from "@/lib/sessao";
 import NavInferior from "@/components/NavInferior";
+import MenuLateral from "@/components/MenuLateral";
 import GuardaPerfil from "@/components/GuardaPerfil";
 import RetornoLogin from "@/components/RetornoLogin";
 import RegistrarSW from "@/components/RegistrarSW";
@@ -38,6 +39,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {children}
           <Suspense fallback={null}>
             <NavInferior />
+            <MenuLateral />
           </Suspense>
         </SessaoProvider>
         <RegistrarSW />

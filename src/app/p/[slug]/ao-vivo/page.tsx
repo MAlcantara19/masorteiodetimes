@@ -6,6 +6,7 @@ import { usePelada } from "@/lib/pelada";
 import { Carregando } from "@/components/Topo";
 import TelaPartida from "@/components/TelaPartida";
 import Capa from "@/components/Capa";
+import Icone from "@/components/Icone";
 
 export default function AoVivoPage() {
   const { pelada, naoAchou } = usePelada();
@@ -26,13 +27,13 @@ export default function AoVivoPage() {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-3 px-4 py-6">
       <Capa
-        titulo={`${pelada.nome} ao vivo`}
-        sub="qualquer um com o link pode ver"
+        titulo={pelada.nome}
+        sub={copiado ? "Link copiado!" : "ao vivo · qualquer um com o link vê"}
         voltar={`/p/${pelada.slug}`}
         logo={pelada.logo_url}
         direita={
-          <button type="button" onClick={compartilhar} className="h-9 shrink-0 rounded-full bg-white/15 px-3 text-sm font-semibold">
-            {copiado ? "Copiado!" : "Compartilhar"}
+          <button type="button" onClick={compartilhar} aria-label="Compartilhar o link" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15">
+            <Icone nome="link" tamanho={18} />
           </button>
         }
       />

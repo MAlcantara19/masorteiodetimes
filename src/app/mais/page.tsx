@@ -9,6 +9,7 @@ import Icone, { type NomeIcone } from "@/components/Icone";
 import Topo, { Carregando } from "@/components/Topo";
 import InstalarApp from "@/components/InstalarApp";
 import AtivarNotificacoes from "@/components/AtivarNotificacoes";
+import { montarMenu } from "@/lib/menu";
 
 type Item = { href: string; titulo: string; sub: string; icone: NomeIcone };
 
@@ -47,45 +48,12 @@ export default function MaisPage() {
   if (carregando || !usuario) return <Carregando />;
 
   const atual = peladas.find((p) => p.slug === atualSlug) ?? peladas[0] ?? null;
-  const b = atual ? `/${atual.slug}` : null;
   const admin = atual ? ehAdmin(atual.id) : false;
 
-  const jogador: Item[] = [
-    { href: "/tour", titulo: "Tour do app", sub: "tudo que o app faz, passo a passo", icone: "estrela" },
-    { href: "/perfil", titulo: "Meu perfil", sub: "nome, apelido e foto", icone: "usuario" },
-    { href: "/perfil/card", titulo: "Meu card", sub: "sua carta e raridade", icone: "cartao" },
-  ];
-  if (atual) {
-    jogador.push(
-      { href: `/p/${atual.slug}/ao-vivo`, titulo: "Link ao vivo", sub: "placar e artilharia pra todos", icone: "link" },
-      { href: `${b}/campeonato`, titulo: "Campeonato", sub: "melhores da semana e do mês", icone: "trofeu" },
-      { href: `/p/${atual.slug}/votar`, titulo: "Votação", sub: "craque, bagre e goleiro", icone: "estrela" },
-      { href: `/p/${atual.slug}/avaliar`, titulo: "Avaliar a pelada", sub: "link pós-jogo pra galera", icone: "check" },
-      { href: `${b}/album`, titulo: "Álbum", sub: "as cartas de todo mundo e a seleção", icone: "imagem" },
-      { href: `${b}/fotos`, titulo: "Fotos do dia", sub: "manda e vê as fotos da pelada", icone: "imagem" },
-      { href: `${b}/pagar`, titulo: "Mensalidade (Pix)", sub: "QR Code com o valor e “já paguei”", icone: "dinheiro" },
-      { href: `${b}/retrospectiva`, titulo: `Retrospectiva ${new Date().getFullYear()}`, sub: "o seu ano na pelada, pra postar", icone: "grafico" },
-      { href: `/p/${atual.slug}`, titulo: "Página da pelada", sub: "pública, com convite e QR code", icone: "inicio" },
-    );
-  }
-  const adminItens: Item[] =
-    atual && admin
-      ? [
-          { href: `${b}/jogadores`, titulo: "Jogadores", sub: "elenco e estrelas", icone: "jogadores" },
-          { href: `${b}/lista`, titulo: "Colar lista do Zap", sub: "monta a presença do dia", icone: "lista" },
-          { href: `${b}/resultados`, titulo: "Resultados do dia", sub: "jogos, gols e correções", icone: "grafico" },
-          { href: `${b}/banners`, titulo: "Banners", sub: "story e quadrado", icone: "imagem" },
-          { href: `${b}/gestao`, titulo: "Presença e mensalidade", sub: "quem veio, quem pagou", icone: "dinheiro" },
-          { href: `${b}/config`, titulo: "Configurar pelada", sub: "horário, regra, PIN do ao vivo", icone: "lapis" },
-        ]
-      : [];
-  const masterItens: Item[] = ehMaster
-    ? [
-        { href: "/master", titulo: "Painel master", sub: "peladas, admins e acessos", icone: "chave" },
-        { href: "/marca", titulo: "Arte da marca", sub: "post, story, logo e capa pra divulgar", icone: "imagem" },
-      ]
-    : [];
-  jogador.push({ href: "/cronometro", titulo: "Cronômetro simples", sub: "sem internet, só neste aparelho", icone: "partida" });
+  const g = montarMenu(atual, admin, ehMaster);
+  const masterItens: Item[] = g.master;
+  const adminItens: Item[] = g.admin;
+  const jogador: Item[] = [...g.jogador, ...g.geral.filter((x) => x.id !== "inicio")];
 
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 py-6">
@@ -93,7 +61,7 @@ export default function MaisPage() {
 
       {peladas.length > 1 && (
         <p className="px-1 text-sm text-apagado">
-          Atalhos da <strong className="text-tinta">{atual?.nome}</strong>. Troque de pelada na tela de Início.
+          Atalhos da <strong className="text-tinta">{atual?.nome}</strong>. Troque de pelada no Menu (botão embaixo, à direita).
         </p>
       )}
 
