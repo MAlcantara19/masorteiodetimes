@@ -36,6 +36,7 @@ export type Pelada = {
   contato_whatsapp?: string | null;
   aviso_dia?: boolean;
   aviso_2h?: boolean;
+  cor_menu?: string | null; // (SQL 0009) cor (padrão) | claro | escuro
   cor_secundaria?: string | null; // (SQL 0004)
   camisa_estilo?: string | null;
   plano?: string | null;

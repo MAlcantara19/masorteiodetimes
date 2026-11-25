@@ -12,6 +12,7 @@ import QrPix from "@/components/QrPix";
 import type { Pelada } from "@/lib/pelada";
 import Camisa, { ESTILOS_CAMISA, siglaDe } from "@/components/Camisa";
 import Bloqueado from "@/components/Bloqueado";
+import { Escolha } from "@/components/Folha";
 import { PALETA } from "@/lib/cores";
 import { temRecurso } from "@/lib/planos";
 
@@ -45,10 +46,16 @@ function ConfigCores({ pelada, nomeAdmin, numeroAdmin, aoSalvar }: { pelada: Pel
   const [cor, setCor] = useState(pelada.cor_banner || "#7444D6");
   const [cor2, setCor2] = useState(pelada.cor_secundaria || "#FFFFFF");
   const [estilo, setEstilo] = useState(pelada.camisa_estilo || "lisa");
+  const [menu, setMenu] = useState(pelada.cor_menu === "claro" || pelada.cor_menu === "escuro" ? pelada.cor_menu : "cor");
   const [erro, setErro] = useState<string | null>(null);
   async function salvar() {
-    const { error } = await criarClienteSupabase().from("peladas").update({ cor_banner: cor, cor_secundaria: cor2, camisa_estilo: estilo }).eq("id", pelada.id);
-    if (error) return setErro(/check/i.test(error.message) ? "Esse modelo precisa do SQL novo (supabase/migrations/0005). Os 5 primeiros já funcionam." : "Não deu pra salvar: " + error.message);
+    const sb = criarClienteSupabase();
+    const { error } = await sb.from("peladas").update({ cor_banner: cor, cor_secundaria: cor2, camisa_estilo: estilo }).eq("id", pelada.id);
+    if (error) return setErro(/check/i.test(error.message) ? "Esse modelo novo precisa do SQL 0009 no Supabase." : "Não deu pra salvar: " + error.message);
+    if ((pelada.cor_menu ?? "cor") !== menu) {
+      const r = await sb.from("peladas").update({ cor_menu: menu }).eq("id", pelada.id);
+      if (r.error) return setErro("Cores salvas. A cor do menu precisa do SQL 0009 no Supabase.");
+    }
     setErro(null);
     aoSalvar();
   }
@@ -61,6 +68,19 @@ function ConfigCores({ pelada, nomeAdmin, numeroAdmin, aoSalvar }: { pelada: Pel
       </div>
       <Bolinhas rotulo="Cor principal (vira a cor do app nesta pelada)" valor={cor} mudar={setCor} />
       <Bolinhas rotulo="Cor do detalhe" valor={cor2} mudar={setCor2} />
+      <div className="flex flex-col gap-1.5">
+        <span className="text-[13px] font-semibold">Barra de menu (embaixo)</span>
+        <Escolha
+          rotulo="Cor do menu"
+          valor={menu}
+          aoMudar={setMenu}
+          opcoes={[
+            { valor: "cor", rotulo: "Cor da pelada" },
+            { valor: "claro", rotulo: "Branca" },
+            { valor: "escuro", rotulo: "Escura" },
+          ]}
+        />
+      </div>
       <div className="flex flex-col gap-1.5">
         <span className="text-[13px] font-semibold">Modelo</span>
         <div className="grid grid-cols-4 gap-1.5">

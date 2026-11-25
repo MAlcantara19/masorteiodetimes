@@ -40,6 +40,7 @@ export type PeladaResumo = {
   recursos?: Record<string, boolean> | null;
   plano_ate?: string | null;
   lista_app?: boolean; // (SQL 0007)
+  cor_menu?: string | null; // (SQL 0009)
 };
 
 export type Vinculo = { membro_id: string; papel: "admin" | "jogador"; pelada: PeladaResumo };

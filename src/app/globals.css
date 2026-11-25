@@ -70,6 +70,16 @@ html[data-tema="escuro"] .bg-\[\#E7F5EC\]:not(.tema-claro .bg-\[\#E7F5EC\]) { ba
 html[data-tema="escuro"] .border-\[\#D8D0E6\] { border-color: #3A3150; }
 html[data-tema="escuro"] .bg-fundo\/95 { background-color: color-mix(in srgb, #0E0A17 95%, transparent); }
 
+/* ---------- Barra de menu (de baixo): cor da pelada (padrão), branca ou escura ---------- */
+html[data-menu="cor"] .barra-menu { background: var(--marca) !important; border-color: transparent; }
+html[data-menu="escuro"] .barra-menu { background: #1B1430 !important; border-color: transparent; }
+html[data-menu="cor"] .barra-menu .menu-item,
+html[data-menu="escuro"] .barra-menu .menu-item { color: rgba(255, 255, 255, 0.68); }
+html[data-menu="cor"] .barra-menu .menu-item[aria-current="page"] { color: #fff; }
+html[data-menu="escuro"] .barra-menu .menu-item[aria-current="page"] { color: var(--marca-claro); }
+html[data-menu="cor"] .barra-menu .menu-item[aria-current="page"] svg,
+html[data-menu="escuro"] .barra-menu .menu-item[aria-current="page"] svg { transform: scale(1.12); }
+
 /* Animação de "abrir pacote" do card (sobe de raridade) */
 @keyframes pacote-tremer {
   0%, 100% { transform: rotate(0deg) scale(1); }

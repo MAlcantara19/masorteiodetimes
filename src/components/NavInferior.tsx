@@ -28,9 +28,9 @@ export default function NavInferior() {
   return (
     <>
       <div className="h-24" aria-hidden="true" />
-      <nav aria-label="Navegação principal" className="fixed inset-x-0 bottom-0 z-30 border-t border-borda bg-white pb-[env(safe-area-inset-bottom)]">
+      <nav aria-label="Navegação principal" className="barra-menu fixed inset-x-0 bottom-0 z-30 border-t border-borda bg-white pb-[env(safe-area-inset-bottom)]">
         <div className="mx-auto flex max-w-xl justify-around pt-2.5 pb-3">
-          <Link href="/" aria-current={ativo("/") ? "page" : undefined} className={`flex min-w-[60px] flex-col items-center gap-1 text-[11px] font-semibold ${ativo("/") ? "text-roxo" : "text-apagado"}`}>
+          <Link href="/" aria-current={ativo("/") ? "page" : undefined} className={`menu-item flex min-w-[60px] flex-col items-center gap-1 text-[11px] font-semibold ${ativo("/") ? "text-roxo" : "text-apagado"}`}>
             <Icone nome="inicio" />
             Início
           </Link>
@@ -39,13 +39,13 @@ export default function NavInferior() {
               key={a.id}
               href={a.href}
               aria-current={ativo(a.href) ? "page" : undefined}
-              className={`flex min-w-[60px] flex-col items-center gap-1 text-[11px] font-semibold ${ativo(a.href) ? "text-roxo" : "text-apagado"}`}
+              className={`menu-item flex min-w-[60px] flex-col items-center gap-1 text-[11px] font-semibold ${ativo(a.href) ? "text-roxo" : "text-apagado"}`}
             >
               <Icone nome={a.icone} />
               {curto(a.titulo)}
             </Link>
           ))}
-          <button type="button" onClick={abrirMenu} className="flex min-w-[60px] flex-col items-center gap-1 text-[11px] font-semibold text-apagado">
+          <button type="button" onClick={abrirMenu} className="menu-item flex min-w-[60px] flex-col items-center gap-1 text-[11px] font-semibold text-apagado">
             <Icone nome="lista" />
             Menu
           </button>

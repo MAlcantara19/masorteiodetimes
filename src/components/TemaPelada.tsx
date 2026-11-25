@@ -10,7 +10,7 @@ import { criarClienteSupabase } from "@/lib/supabase/client";
 import { varsDaMarca } from "@/lib/cores";
 import { temRecurso } from "@/lib/planos";
 
-type Tema = { cor_banner?: string | null; plano?: string | null; recursos?: Record<string, boolean> | null; plano_ate?: string | null };
+type Tema = { cor_banner?: string | null; cor_menu?: string | null; plano?: string | null; recursos?: Record<string, boolean> | null; plano_ate?: string | null };
 
 export default function TemaPelada() {
   const caminho = usePathname();
@@ -36,12 +36,18 @@ export default function TemaPelada() {
       .then(({ data }) => setPublicas((m) => ({ ...m, [slugPublico]: (data as Tema) ?? null })));
   }, [slugPublico, conhecida, publicas]);
 
-  const cor = tema && temRecurso(tema, "cores") ? tema.cor_banner : null;
+  const comCores = !!tema && temRecurso(tema, "cores");
+  const cor = comCores ? tema.cor_banner : null;
+  // Barra de menu: na cor da pelada (padrão, roxo da marca), branca ou escura.
+  const menu = comCores && (tema.cor_menu === "claro" || tema.cor_menu === "escuro") ? tema.cor_menu : "cor";
   useEffect(() => {
     const vars = varsDaMarca(cor);
     const raiz = document.documentElement;
     for (const [k, v] of Object.entries(vars)) raiz.style.setProperty(k, v);
   }, [cor]);
+  useEffect(() => {
+    document.documentElement.dataset.menu = menu;
+  }, [menu]);
 
   return null;
 }
