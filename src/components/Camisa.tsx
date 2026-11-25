@@ -14,6 +14,7 @@ export type OpcoesCamisa = {
   gola?: Gola;
   mangas?: Mangas;
   friso?: boolean; // friso fino no ombro, de duas cores
+  foto?: string | null; // foto da camisa de verdade da pelada (aparece no lugar do desenho, de frente)
 };
 
 export type EstiloCamisa =
@@ -81,12 +82,12 @@ const ANTIGOS: Record<string, { modelo: EstiloCamisa; extra?: OpcoesCamisa }> = 
   raio: { modelo: "chevron" },
 };
 
-export function resolverCamisa(estilo: string | null | undefined, opcoes?: OpcoesCamisa | null): { modelo: EstiloCamisa; op: Required<Omit<OpcoesCamisa, "cor3">> & { cor3: string | null } } {
+export function resolverCamisa(estilo: string | null | undefined, opcoes?: OpcoesCamisa | null): { modelo: EstiloCamisa; op: Required<Omit<OpcoesCamisa, "cor3" | "foto">> & { cor3: string | null; foto: string | null } } {
   const antigo = estilo ? ANTIGOS[estilo] : undefined;
   const modelo = (antigo?.modelo ?? (ESTILOS_CAMISA.some((e) => e.valor === estilo) ? estilo : "lisa")) as EstiloCamisa;
   const base = ESTILOS_CAMISA.find((e) => e.valor === modelo)?.padrao ?? {};
   const o = { ...base, ...(antigo?.extra ?? {}), ...(opcoes ?? {}) };
-  return { modelo, op: { tom: o.tom ?? "contraste", cor3: o.cor3 ?? null, gola: o.gola ?? "redonda", mangas: o.mangas ?? "iguais", friso: !!o.friso } };
+  return { modelo, op: { tom: o.tom ?? "contraste", cor3: o.cor3 ?? null, gola: o.gola ?? "redonda", mangas: o.mangas ?? "iguais", friso: !!o.friso, foto: o.foto ?? null } };
 }
 
 // Silhueta: ombro caído, manga curta, levemente acinturada, barra curva.
@@ -278,6 +279,14 @@ function Desenho({ e, F, F2, base, id }: { e: EstiloCamisa; F: string; F2: strin
 
 export default function Camisa({ cor, cor2, estilo, opcoes, logo, sigla, costas, largura = 180, className }: Props) {
   const id = useId().replace(/:/g, "");
+  // Foto da camisa de verdade: de frente mostra a foto; de costas continua o desenho com nome e número.
+  if (opcoes?.foto && !costas) {
+    return (
+      <svg viewBox="0 0 200 220" width={largura} height={(largura * 220) / 200} className={className} role="img" aria-label="Camisa da pelada">
+        <image href={opcoes.foto} x="0" y="0" width="200" height="220" preserveAspectRatio="xMidYMid meet" />
+      </svg>
+    );
+  }
   const { modelo: e, op } = resolverCamisa(estilo, opcoes);
   const escura = textoSobre(cor) === "#FFFFFF";
   const contorno = escura ? "rgba(255,255,255,0.32)" : "rgba(0,0,0,0.26)";

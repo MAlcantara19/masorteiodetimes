@@ -9,7 +9,7 @@ import Icone, { type NomeIcone } from "@/components/Icone";
 import Topo, { Carregando } from "@/components/Topo";
 import InstalarApp from "@/components/InstalarApp";
 import AtivarNotificacoes from "@/components/AtivarNotificacoes";
-import { montarMenu } from "@/lib/menu";
+import { montarMenu, porGrupo } from "@/lib/menu";
 
 type Item = { href: string; titulo: string; sub: string; icone: NomeIcone };
 
@@ -52,8 +52,7 @@ export default function MaisPage() {
 
   const g = montarMenu(atual, admin, ehMaster);
   const masterItens: Item[] = g.master;
-  const adminItens: Item[] = g.admin;
-  const jogador: Item[] = [...g.jogador, ...g.geral.filter((x) => x.id !== "inicio")];
+  const jogador = [...g.jogador, ...g.geral];
 
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-5 px-4 py-6">
@@ -66,8 +65,12 @@ export default function MaisPage() {
       )}
 
       <Grupo titulo="Painel master" itens={masterItens} />
-      <Grupo titulo="Admin da pelada" itens={adminItens} />
-      <Grupo titulo="Jogador" itens={jogador} />
+      {porGrupo(g.admin).map(([nome, itens]) => (
+        <Grupo key={`a${nome}`} titulo={`Admin · ${nome}`} itens={itens} />
+      ))}
+      {porGrupo(jogador).map(([nome, itens]) => (
+        <Grupo key={`j${nome}`} titulo={nome || "Pelada"} itens={itens} />
+      ))}
 
       <AtivarNotificacoes />
       <InstalarApp />

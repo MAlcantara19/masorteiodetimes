@@ -51,6 +51,19 @@ function ConfigCores({ pelada, nomeAdmin, numeroAdmin, aoSalvar }: { pelada: Pel
   const [menu, setMenu] = useState(pelada.cor_menu === "claro" || pelada.cor_menu === "escuro" ? pelada.cor_menu : "cor");
   const [erro, setErro] = useState<string | null>(null);
   const mudar = (n: Partial<OpcoesCamisa>) => setOp({ ...op, ...n });
+  const [enviandoFoto, setEnviandoFoto] = useState(false);
+
+  // Foto da camisa de verdade (de frente, de preferência com fundo liso).
+  async function enviarFotoCamisa(arq: File) {
+    setEnviandoFoto(true);
+    const sb = criarClienteSupabase();
+    const { data: u } = await sb.auth.getUser();
+    const caminho = `${u.user?.id ?? "x"}/camisa-${pelada.slug}-${Date.now()}.${arq.name.split(".").pop() || "png"}`;
+    const up = await sb.storage.from("imagens").upload(caminho, arq, { contentType: arq.type });
+    setEnviandoFoto(false);
+    if (up.error) return setErro("Não deu pra enviar a foto.");
+    mudar({ foto: sb.storage.from("imagens").getPublicUrl(caminho).data.publicUrl });
+  }
 
   // Trocar de modelo usa a gola/tom sugeridos dele, mantendo as cores escolhidas.
   function escolherModelo(m: EstiloCamisa) {
@@ -126,6 +139,21 @@ function ConfigCores({ pelada, nomeAdmin, numeroAdmin, aoSalvar }: { pelada: Pel
         <div className="flex items-center justify-between">
           <span className="text-[13px] font-semibold">Friso no ombro</span>
           <Interruptor rotulo="Friso no ombro" ligado={!!op.friso} aoMudar={(v) => mudar({ friso: v })} />
+        </div>
+        <div className="flex flex-col gap-1.5 border-t border-borda pt-3">
+          <span className="text-[13px] font-semibold">Vocês têm uniforme? Use a foto da camisa de verdade</span>
+          <span className="text-xs text-apagado">Foto de frente, de preferência com fundo liso. Ela aparece no lugar do desenho; de costas continua o nome e o número.</span>
+          <div className="flex gap-2">
+            <label className="flex h-10 cursor-pointer items-center rounded-xl border border-roxo px-3 text-sm font-semibold text-roxo">
+              {enviandoFoto ? "Enviando…" : op.foto ? "Trocar foto" : "Enviar foto"}
+              <input type="file" accept="image/*" className="sr-only" onChange={(e) => e.target.files?.[0] && enviarFotoCamisa(e.target.files[0])} />
+            </label>
+            {op.foto && (
+              <button type="button" onClick={() => mudar({ foto: null })} className="h-10 rounded-xl border border-borda px-3 text-sm font-semibold">
+                Voltar pro desenho
+              </button>
+            )}
+          </div>
         </div>
       </div>
 

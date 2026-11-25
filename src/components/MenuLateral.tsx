@@ -6,30 +6,70 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { useSessao } from "@/lib/sessao";
 import { definirPeladaAtual, usePeladaAtual } from "@/lib/pelada-atual";
-import { atalhosPadrao, gravarAtalhos, MAX_ATALHOS, montarMenu, ouvirMenu, useAtalhos, type ItemMenu } from "@/lib/menu";
+import { atalhosPadrao, gravarAtalhos, MAX_ATALHOS, montarMenu, ouvirMenu, porGrupo, useAtalhos, type ItemMenu } from "@/lib/menu";
 import Icone from "./Icone";
 
-function Secao({ titulo, itens, fechar }: { titulo: string; itens: ItemMenu[]; fechar: () => void }) {
+// Um bloco do menu (Admin, a pelada, Geral), com os grupos por assunto que abrem e fecham.
+function Secao({ titulo, itens, fechar, abertos, alternar }: { titulo: string; itens: ItemMenu[]; fechar: () => void; abertos: Set<string>; alternar: (g: string) => void }) {
   if (!itens.length) return null;
   return (
     <div className="flex flex-col">
-      <span className="px-3 pt-3 pb-1 text-[11px] font-bold tracking-wider text-apagado uppercase">{titulo}</span>
-      {itens.map((i) => (
-        <Link key={i.id} href={i.href} onClick={fechar} className="flex items-center gap-3 rounded-xl px-3 py-2.5 hover:bg-fundo">
-          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-roxo-suave text-roxo-escuro">
-            <Icone nome={i.icone} tamanho={18} />
-          </span>
-          <span className="text-[15px] font-semibold">{i.titulo}</span>
-        </Link>
-      ))}
+      <span className="px-3 pt-4 pb-1 text-[11px] font-bold tracking-wider text-apagado uppercase">{titulo}</span>
+      {porGrupo(itens).map(([g, lista]) => {
+        const chave = `${titulo}|${g}`;
+        const aberto = !g || abertos.has(chave);
+        return (
+          <div key={chave} className="flex flex-col">
+            {g && (
+              <button type="button" onClick={() => alternar(chave)} aria-expanded={aberto} className="flex items-center justify-between rounded-xl px-3 py-2 text-left text-[14px] font-bold">
+                {g}
+                <span className="flex items-center gap-2 text-xs font-semibold text-apagado">
+                  {!aberto && lista.length}
+                  <span className={`transition-transform ${aberto ? "rotate-90" : ""}`}>›</span>
+                </span>
+              </button>
+            )}
+            {aberto &&
+              lista.map((i) => (
+                <Link key={i.id} href={i.href} onClick={fechar} className="flex items-center gap-3 rounded-xl px-3 py-2 hover:bg-fundo">
+                  <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-roxo-suave text-roxo-escuro">
+                    <Icone nome={i.icone} tamanho={17} />
+                  </span>
+                  <span className="text-[15px] font-semibold">{i.titulo}</span>
+                </Link>
+              ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
+
+const CHAVE_ABERTOS = "masorteio:menu-abertos";
+const ABERTOS_PADRAO = ["Admin|Antes do jogo", "Pelada|Dia de jogo"];
 
 export default function MenuLateral() {
   const [aberto, setAberto] = useState(false);
   const [editando, setEditando] = useState(false);
   const [trocando, setTrocando] = useState(false);
+  // Grupos abertos (guardado neste aparelho): começa com "Antes do jogo" e "Dia de jogo".
+  const [abertos, setAbertos] = useState<Set<string>>(() => {
+    try {
+      const raw = window.localStorage.getItem(CHAVE_ABERTOS);
+      return new Set(raw ? (JSON.parse(raw) as string[]) : ABERTOS_PADRAO);
+    } catch {
+      return new Set(ABERTOS_PADRAO);
+    }
+  });
+  function alternarGrupo(g: string) {
+    const n = new Set(abertos);
+    if (n.has(g)) n.delete(g);
+    else n.add(g);
+    setAbertos(n);
+    try {
+      window.localStorage.setItem(CHAVE_ABERTOS, JSON.stringify([...n]));
+    } catch {}
+  }
   const caminho = usePathname();
   const router = useRouter();
   const { usuario, perfil, peladas, ehMaster, ehAdmin, sair } = useSessao();
@@ -113,10 +153,10 @@ export default function MenuLateral() {
         )}
 
         <div className="flex flex-col px-1 pb-2">
-          <Secao titulo="Master" itens={g.master} fechar={fechar} />
-          <Secao titulo={`Admin · ${atual?.nome ?? ""}`} itens={g.admin} fechar={fechar} />
-          <Secao titulo={atual?.nome ?? "Pelada"} itens={g.jogador} fechar={fechar} />
-          <Secao titulo="Geral" itens={g.geral} fechar={fechar} />
+          <Secao titulo="Master" itens={g.master} fechar={fechar} abertos={abertos} alternar={alternarGrupo} />
+          <Secao titulo="Admin" itens={g.admin} fechar={fechar} abertos={abertos} alternar={alternarGrupo} />
+          <Secao titulo="Pelada" itens={g.jogador} fechar={fechar} abertos={abertos} alternar={alternarGrupo} />
+          <Secao titulo="Geral" itens={g.geral} fechar={fechar} abertos={abertos} alternar={alternarGrupo} />
         </div>
 
         <div className="mx-3 mb-3 flex flex-col gap-2 rounded-2xl bg-fundo p-3">
