@@ -12,6 +12,8 @@ import {
   acoesPendentes,
   calcularFila,
   enviarAcao,
+  guardarCache,
+  lerCache,
   formatarRelogio,
   gravarPin,
   lerPin,
@@ -25,6 +27,7 @@ import {
 } from "@/lib/partida";
 import { avisarPush } from "@/lib/push-cliente";
 import { linkZap, textoDoDia, textoDoJogo } from "@/lib/resumo-zap";
+import CraqueDaPartida, { carregarCraques, craquesPorJogo } from "./CraqueDaPartida";
 import Folha from "./Folha";
 import Icone from "./Icone";
 import { Carregando } from "./Topo";
@@ -68,46 +71,67 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
   const canalRef = useRef<{ track: (x: object) => unknown } | null>(null);
   const quemSou = useRef<{ nome: string; tipo: "admin" | "membro" | "pin" | "visitante" }>({ nome: "Visitante", tipo: "visitante" });
   const [pendentes, setPendentes] = useState(0);
-  const [telao, setTelao] = useState(false);
   const [aba, setAba] = useState<"lances" | "artilharia">("lances");
   const [formPin, setFormPin] = useState({ pin: "", nome: "" });
   const [ocupado, setOcupado] = useState(false);
   const [zapJogo, setZapJogo] = useState<string | null>(null); // jogo que acabou de encerrar (pra mandar no grupo)
+  const [craques, setCraques] = useState<Map<string, string[]>>(new Map()); // craque de cada jogo (votação)
   const vibrou = useRef<string | null>(null);
   const ultimaAcao = useRef<{ chave: string; em: number }>({ chave: "", em: 0 });
 
   // ---------- Carregar ----------
   const carregar = useCallback(async () => {
-    const ev = await eventoAtual(pelada.id);
-    if (!ev) return setDados(null);
-    const sb = criarClienteSupabase();
-    const [sorteios, { data: ps }, presencas] = await Promise.all([
-      carregarSorteios(ev.id),
-      sb.from("partidas").select("*").eq("evento_id", ev.id).order("numero"),
-      carregarPresencas(ev.id),
-    ]);
-    const partidas = (ps ?? []) as Partida[];
-    const ids = partidas.map((p) => p.id);
-    const atual = partidas[partidas.length - 1];
-    const [{ data: ls }, { data: pa }] = await Promise.all([
-      ids.length ? sb.from("lances").select("*").in("partida_id", ids).order("created_at") : Promise.resolve({ data: [] }),
-      atual ? sb.from("pausas").select("*").eq("partida_id", atual.id).order("inicio") : Promise.resolve({ data: [] }),
-    ]);
-    setDados({
-      evento: ev,
-      sorteio: sorteios.find((s) => s.oficial) ?? sorteios[sorteios.length - 1] ?? null,
-      partidas,
-      lances: (ls ?? []) as Lance[],
-      pausa: ((pa ?? []) as Pausa[]).find((x) => !x.fim) ?? null,
-      pausas: (pa ?? []) as Pausa[],
-      presencas,
-    });
+    const chaveCache = `partida:${pelada.id}`;
+    const doCache = () => setDados((d) => (d === undefined ? (lerCache<Dados>(chaveCache) ?? null) : d));
+    // Com ações esperando a internet, a tela confia no que está no aparelho.
+    if (acoesPendentes() > 0) return doCache();
+    try {
+      const ev = await eventoAtual(pelada.id, true);
+      if (!ev) return setDados(null);
+      const sb = criarClienteSupabase();
+      const [sorteios, { data: ps, error: e1 }, presencas] = await Promise.all([
+        carregarSorteios(ev.id),
+        sb.from("partidas").select("*").eq("evento_id", ev.id).order("numero"),
+        carregarPresencas(ev.id),
+      ]);
+      if (e1) throw new Error(e1.message);
+      const partidas = (ps ?? []) as Partida[];
+      const ids = partidas.map((p) => p.id);
+      const atual = partidas[partidas.length - 1];
+      const [{ data: ls, error: e2 }, { data: pa }] = await Promise.all([
+        ids.length ? sb.from("lances").select("*").in("partida_id", ids).order("created_at") : Promise.resolve({ data: [], error: null }),
+        atual ? sb.from("pausas").select("*").eq("partida_id", atual.id).order("inicio") : Promise.resolve({ data: [] }),
+      ]);
+      if (e2) throw new Error(e2.message);
+      if (acoesPendentes() > 0) return; // ficou sem internet no meio: não apaga o que foi marcado
+      const novo: Dados = {
+        evento: ev,
+        sorteio: sorteios.find((s) => s.oficial) ?? sorteios[sorteios.length - 1] ?? null,
+        partidas,
+        lances: (ls ?? []) as Lance[],
+        pausa: ((pa ?? []) as Pausa[]).find((x) => !x.fim) ?? null,
+        pausas: (pa ?? []) as Pausa[],
+        presencas,
+      };
+      setDados(novo);
+      guardarCache(chaveCache, novo);
+      carregarCraques(ev.id).then((v) => setCraques(craquesPorJogo(v)));
+    } catch {
+      doCache(); // sem internet: fica com o que já tem (ou com a última foto guardada)
+    }
   }, [pelada.id]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     carregar();
-    carregarElenco(pelada.id, false).then(setElenco); // nunca com notas: esta tela é pública
+    // Nunca com notas: esta tela é pública. Sem internet, usa o elenco guardado.
+    const cacheElenco = lerCache<Membro[]>(`elenco:${pelada.id}`);
+    if (cacheElenco) setElenco(cacheElenco);
+    carregarElenco(pelada.id, false).then((el) => {
+      if (!el.length) return;
+      setElenco(el);
+      guardarCache(`elenco:${pelada.id}`, el);
+    });
     medirDiferencaRelogio().then(setDif);
     setPin(lerPin(pelada.id));
     setPendentes(acoesPendentes());
@@ -250,33 +274,86 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
   }
 
   // Mostra o resultado na hora, antes do banco responder (depois o banco confirma).
-  function otimista(nomeAcao: string, d: Record<string, unknown>) {
-    if (!partida || !dados) return;
-    const p = { ...partida };
-    const agoraIso = new Date(Date.now() + dif).toISOString();
-    if (nomeAcao === "gol" || nomeAcao === "gol_contra") {
-      if (d.time === p.time_a) p.placar_a++;
-      else if (d.time === p.time_b) p.placar_b++;
-    } else if (nomeAcao === "menos") {
-      if (d.time === p.time_a) p.placar_a = Math.max(0, p.placar_a - 1);
-      else if (d.time === p.time_b) p.placar_b = Math.max(0, p.placar_b - 1);
-    } else if (nomeAcao === "pausar" && p.status === "rolando") {
-      p.status = "pausado";
-      p.pausado_em = agoraIso;
-    } else if (nomeAcao === "iniciar" && p.status === "aguardando") {
-      p.status = "rolando";
-      p.inicio_em = agoraIso;
-    } else if (nomeAcao === "iniciar" && p.status === "pausado" && p.pausado_em) {
-      p.segundos_pausados += Math.round((Date.now() + dif - new Date(p.pausado_em).getTime()) / 1000);
-      p.status = "rolando";
-      p.pausado_em = null;
-    } else if (nomeAcao === "motivo_pausa" && dados.pausa) {
-      const motivo = (d.motivo as string) || null;
-      const pausa = { ...dados.pausa, motivo };
-      setDados({ ...dados, pausa, pausas: dados.pausas.map((x) => (x.id === pausa.id ? pausa : x)) });
-      return;
-    } else return;
-    setDados({ ...dados, partidas: dados.partidas.map((x) => (x.id === p.id ? p : x)) });
+  // Sem internet, é isso que fica na tela até a internet voltar.
+  function otimista(nomeAcao: string, d: Record<string, unknown>, partidaId: string) {
+    const agora = Date.now() + dif;
+    const agoraIso = new Date(agora).toISOString();
+    setDados((atual) => {
+      if (!atual) return atual;
+      const orig = atual.partidas.find((x) => x.id === partidaId);
+      if (!orig) return atual;
+      const p = { ...orig };
+      let lances = atual.lances;
+      const desfazerLance = (filtro: (l: Lance) => boolean) => {
+        const ultimo = [...lances].reverse().find((l) => l.partida_id === p.id && !l.desfeito && filtro(l));
+        if (!ultimo) return null;
+        lances = lances.map((l) => (l.id === ultimo.id ? { ...l, desfeito: true } : l));
+        return ultimo;
+      };
+      const tirar = (time: number) => {
+        if (time === p.time_a) p.placar_a = Math.max(0, p.placar_a - 1);
+        else if (time === p.time_b) p.placar_b = Math.max(0, p.placar_b - 1);
+      };
+      if (nomeAcao === "gol" || nomeAcao === "gol_contra") {
+        if (d.time === p.time_a) p.placar_a++;
+        else if (d.time === p.time_b) p.placar_b++;
+        lances = [
+          ...lances,
+          {
+            id: `local-${crypto.randomUUID()}`,
+            partida_id: p.id,
+            tipo: nomeAcao,
+            time: d.time as number,
+            autor_id: (d.autor as string) || null,
+            assist_id: nomeAcao === "gol" ? (d.assist as string) || null : null,
+            minuto: Math.max(1, Math.ceil(segundosRolando(p, agora) / 60)),
+            criado_por_nome: null,
+            desfeito: false,
+            created_at: agoraIso,
+          },
+        ];
+      } else if (nomeAcao === "menos") {
+        desfazerLance((l) => l.time === d.time);
+        tirar(d.time as number);
+      } else if (nomeAcao === "desfazer") {
+        const l = desfazerLance(() => true);
+        if (l) tirar(l.time);
+      } else if (nomeAcao === "pausar" && p.status === "rolando") {
+        p.status = "pausado";
+        p.pausado_em = agoraIso;
+      } else if (nomeAcao === "iniciar" && p.status === "aguardando") {
+        p.status = "rolando";
+        p.inicio_em = agoraIso;
+      } else if (nomeAcao === "iniciar" && p.status === "pausado" && p.pausado_em) {
+        p.segundos_pausados += Math.round((agora - new Date(p.pausado_em).getTime()) / 1000);
+        p.status = "rolando";
+        p.pausado_em = null;
+      } else if (nomeAcao === "encerrar" && p.status !== "encerrada") {
+        if (p.pausado_em) p.segundos_pausados += Math.round((agora - new Date(p.pausado_em).getTime()) / 1000);
+        p.pausado_em = null;
+        p.inicio_em = p.inicio_em ?? agoraIso;
+        p.encerrada_em = agoraIso;
+        p.status = "encerrada";
+        p.vencedor = p.placar_a > p.placar_b ? p.time_a : p.placar_b > p.placar_a ? p.time_b : null;
+      } else if (nomeAcao === "vencedor") {
+        p.vencedor = d.vencedor === "" || d.vencedor === null || d.vencedor === undefined ? null : Number(d.vencedor);
+      } else if (nomeAcao === "mais_minuto") {
+        p.duracao_seg += Number(d.segundos ?? 60);
+      } else if (nomeAcao === "times") {
+        p.time_a = d.time_a as number;
+        p.time_b = d.time_b as number;
+      } else if (nomeAcao === "goleiros") {
+        if ("goleiro_a" in d) p.goleiro_a = (d.goleiro_a as string) || null;
+        if ("goleiro_b" in d) p.goleiro_b = (d.goleiro_b as string) || null;
+        if ("goleiro_a_linha" in d) p.goleiro_a_linha = !!d.goleiro_a_linha;
+        if ("goleiro_b_linha" in d) p.goleiro_b_linha = !!d.goleiro_b_linha;
+      } else if (nomeAcao === "motivo_pausa" && atual.pausa) {
+        const motivo = (d.motivo as string) || null;
+        const pausa = { ...atual.pausa, motivo };
+        return { ...atual, pausa, pausas: atual.pausas.map((x) => (x.id === pausa.id ? pausa : x)) };
+      } else return atual;
+      return { ...atual, partidas: atual.partidas.map((x) => (x.id === p.id ? p : x)), lances };
+    });
   }
 
   async function acao(nomeAcao: string, d: Record<string, unknown> = {}) {
@@ -285,11 +362,13 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
     const chave = nomeAcao + JSON.stringify(d);
     if (ultimaAcao.current.chave === chave && Date.now() - ultimaAcao.current.em < 1200) return;
     ultimaAcao.current = { chave, em: Date.now() };
-    otimista(nomeAcao, d);
+    otimista(nomeAcao, d, partida.id);
     if ((nomeAcao === "gol" || nomeAcao === "gol_contra") && navigator.vibrate) navigator.vibrate(40);
     // Lê o PIN do aparelho na hora (pode ter acabado de ser digitado).
     const p = membro ? null : lerPin(pelada.id);
-    const r = await enviarAcao({ partida: partida.id, acao: nomeAcao, dados: d, pin: p?.pin ?? null, nome: p?.nome ?? null });
+    // "em" = a hora em que a ação aconteceu (se for enviada depois, o banco usa essa hora; SQL 0005).
+    const comHora = { ...d, em: new Date(Date.now() + dif).toISOString() };
+    const r = await enviarAcao({ partida: partida.id, acao: nomeAcao, dados: comHora, pin: p?.pin ?? null, nome: p?.nome ?? null });
     if (r.offline) {
       setPendentes(acoesPendentes());
       setAviso("Sem internet: guardei a ação e mando assim que voltar.");
@@ -321,15 +400,53 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
     const prox = calcularFila(qtdTimes, atualizadas, pelada.regra_empate).proximo;
     if (prox) {
       const gk = dados.sorteio?.goleiros ?? [];
-      const { error } = await criarClienteSupabase().rpc("nova_partida", {
+      const novoId = crypto.randomUUID();
+      const params = {
         p_evento: dados.evento.id,
         p_time_a: prox[0],
         p_time_b: prox[1],
         p_goleiro_a: gk[prox[0]] ?? null,
         p_goleiro_b: gk[prox[1]] ?? null,
-        p_pin: membro ? null : (lerPin(pelada.id)?.pin ?? null),
-      });
-      if (error) setAviso("Jogo encerrado, mas não deu pra chamar o próximo: " + error.message);
+        p_id: novoId,
+      };
+      const pinAgora = membro ? null : (lerPin(pelada.id)?.pin ?? null);
+      const r = await enviarAcao({ partida: novoId, acao: "__nova", dados: params, pin: pinAgora, nome: null });
+      if (r.offline) {
+        // Sem internet: o próximo jogo já aparece na tela e vai pro banco quando a internet voltar.
+        setPendentes(acoesPendentes());
+        setDados((atual) =>
+          atual
+            ? {
+                ...atual,
+                partidas: [
+                  ...atual.partidas,
+                  {
+                    id: novoId,
+                    evento_id: atual.evento.id,
+                    numero: Math.max(0, ...atual.partidas.map((x) => x.numero)) + 1,
+                    time_a: prox[0],
+                    time_b: prox[1],
+                    goleiro_a: params.p_goleiro_a,
+                    goleiro_b: params.p_goleiro_b,
+                    goleiro_a_linha: false,
+                    goleiro_b_linha: false,
+                    duracao_seg: pelada.minutos * 60,
+                    inicio_em: null,
+                    pausado_em: null,
+                    segundos_pausados: 0,
+                    encerrada_em: null,
+                    status: "aguardando",
+                    placar_a: 0,
+                    placar_b: 0,
+                    vencedor: null,
+                  },
+                ],
+                pausa: null,
+                pausas: [],
+              }
+            : atual,
+        );
+      } else if (!r.ok) setAviso("Jogo encerrado, mas não deu pra chamar o próximo: " + r.erro);
     }
     setOcupado(false);
     carregar();
@@ -397,6 +514,7 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
 
   // Resumo do dia
   const encerradas = dados.partidas.filter((p) => p.status === "encerrada");
+  const ultimaEncerrada = encerradas[encerradas.length - 1] ?? null;
   const vitorias = new Map<number, number>();
   for (const p of encerradas) {
     const v = p.vencedor ?? (p.placar_a > p.placar_b ? p.time_a : p.placar_b > p.placar_a ? p.time_b : null);
@@ -441,29 +559,6 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
   const completaram = (dados.sorteio.espera ?? []).filter((id) => !times.flat().includes(id));
   const goleirosDia = dados.presencas.filter((p) => p.goleiro && p.status !== "saiu").map((p) => p.membro_id);
 
-  // ---------- Telão ----------
-  if (telao) {
-    return (
-      <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-[4vh] bg-noite p-6 text-white" onClick={() => { setTelao(false); document.exitFullscreen?.().catch(() => {}); }}>
-        <span className="text-[3vh] font-semibold tracking-widest text-roxo-claro">{pelada.nome.toUpperCase()} · JOGO {partida.numero} · {statusTxt}</span>
-        <span className={`font-display text-[28vmin] leading-none font-bold tabular-nums ${fimDoTempo ? "text-alerta-suave" : ""}`}>{relogio}</span>
-        <div className="flex items-center gap-[6vw]">
-          {lados.map((l, i) => (
-            <div key={l.lado} className="flex items-center gap-[3vw]">
-              {i === 1 && <span className="font-display text-[10vmin] text-white/40">×</span>}
-              <div className="flex flex-col items-center">
-                <span className="text-[4vmin] font-bold" style={{ color: CORES_TIMES[l.time] }}>{NOMES_TIMES[l.time]}</span>
-                <span className="font-display text-[22vmin] leading-none font-bold tabular-nums">{l.placar}</span>
-              </div>
-            </div>
-          ))}
-        </div>
-        {fila.espera.length > 0 && <span className="text-[3vh] text-[#CFC7E0]">Próximo: {NOMES_TIMES[fila.espera[0]]}</span>}
-        <span className="text-sm text-white/40">Toque pra sair do telão</span>
-      </div>
-    );
-  }
-
   // ---------- Tela ----------
   return (
     <div className="flex flex-col gap-3">
@@ -476,16 +571,9 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
             {Math.max(1, vendo.length)} {Math.max(1, vendo.length) === 1 ? "pessoa vendo" : "pessoas vendo"}
           </button>
         </span>
-        <button
-          type="button"
-          onClick={() => {
-            setTelao(true);
-            document.documentElement.requestFullscreen?.().catch(() => {});
-          }}
-          className="flex items-center gap-1 rounded-full border border-borda bg-white px-3 py-1.5 font-semibold"
-        >
+        <Link href={`/p/${pelada.slug}/telao`} className="flex items-center gap-1 rounded-full border border-borda bg-white px-3 py-1.5 font-semibold">
           <Icone nome="tela" tamanho={16} /> Telão
-        </button>
+        </Link>
       </div>
 
       {verQuem && vendo.length > 0 && (
@@ -659,6 +747,17 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
         </section>
       )}
 
+      {ultimaEncerrada && agoraServidor - new Date(ultimaEncerrada.encerrada_em ?? 0).getTime() < 3 * 3600_000 && (
+        <CraqueDaPartida
+          key={ultimaEncerrada.id}
+          partida={ultimaEncerrada}
+          times={times}
+          nome={nome}
+          agoraServidor={agoraServidor}
+          aoVotar={() => carregarCraques(dados.evento.id).then((v) => setCraques(craquesPorJogo(v)))}
+        />
+      )}
+
       {/* Placar do dia: vitórias de cada time e quem ganhou de quem */}
       {encerradas.length > 0 && (
         <section className="flex flex-col gap-2 rounded-2xl border border-borda bg-white p-4">
@@ -695,6 +794,7 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
                 <span className="text-apagado">Jogo {p.numero}</span>
                 <span className="flex-1 text-right tabular-nums">
                   {NOMES_TIMES[p.time_a]} <strong>{p.placar_a} × {p.placar_b}</strong> {NOMES_TIMES[p.time_b]}
+                  {craques.get(p.id) && <span className="block text-[11px] text-apagado">⭐ {craques.get(p.id)!.map(nome).join(" e ")}</span>}
                 </span>
                 <a href={zapDoJogo(p)} target="_blank" rel="noreferrer" aria-label={`Mandar o jogo ${p.numero} no Zap`} className="text-zap">
                   <Icone nome="zap" tamanho={15} />

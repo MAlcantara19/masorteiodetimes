@@ -7,13 +7,15 @@ import { useSessao } from "@/lib/sessao";
 import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
 import { Carregando } from "@/components/Topo";
 import Capa from "@/components/Capa";
+import Camisa, { siglaDe } from "@/components/Camisa";
+import { temRecurso } from "@/lib/planos";
 
 export default function ConvitePage() {
   const router = useRouter();
   const q = useSearchParams();
   const codigo = q.get("c") ?? "";
   const { pelada, slug, naoAchou } = usePelada();
-  const { carregando, usuario, vinculos, recarregar } = useSessao();
+  const { carregando, usuario, perfil, vinculos, recarregar } = useSessao();
   const [livres, setLivres] = useState<Membro[]>([]);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -46,6 +48,23 @@ export default function ConvitePage() {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-8">
       <Capa titulo={pelada.nome} sub="Você foi convidado pra jogar no MA Sorteio" voltar="/" logo={pelada.logo_url} />
+
+      {temRecurso(pelada, "cores") && (
+        <section className="flex flex-col items-center gap-1 rounded-2xl border border-borda bg-white p-4 text-center">
+          <div className="flex justify-center gap-1">
+            <Camisa cor={pelada.cor_banner || "#7444D6"} cor2={pelada.cor_secundaria || "#FFFFFF"} estilo={pelada.camisa_estilo} logo={pelada.logo_url} sigla={siglaDe(pelada.nome)} largura={120} />
+            <Camisa
+              cor={pelada.cor_banner || "#7444D6"}
+              cor2={pelada.cor_secundaria || "#FFFFFF"}
+              estilo={pelada.camisa_estilo}
+              costas={{ nome: perfil?.apelido || perfil?.nome?.split(" ")[0] || "Você", numero: perfil?.numero_camisa ?? 10 }}
+              largura={120}
+            />
+          </div>
+          <span className="font-display text-lg font-bold">Sua camisa já está te esperando</span>
+          <span className="text-sm text-apagado">{usuario ? "Com o seu nome nas costas. O número você escolhe no seu perfil." : "Entre pra ver com o seu nome nas costas."}</span>
+        </section>
+      )}
 
       {!usuario && (
         <Link href={`/entrar?volta=${encodeURIComponent(volta)}`} className="flex h-14 items-center justify-center rounded-2xl bg-roxo text-lg font-bold text-white">

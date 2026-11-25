@@ -15,6 +15,7 @@ export type Perfil = {
   perfil_completo: boolean;
   cor_card: string | null;
   estilo_card?: string | null;
+  numero_camisa?: number | null; // SQL 0005
 };
 
 export type PeladaResumo = {

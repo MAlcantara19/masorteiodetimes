@@ -120,7 +120,7 @@ export default function PaginaPublica() {
               cor={pelada.cor_banner || "#7444D6"}
               cor2={pelada.cor_secundaria || "#FFFFFF"}
               estilo={pelada.camisa_estilo}
-              costas={{ nome: perfil?.apelido || perfil?.nome?.split(" ")[0] || "Craque", numero: 10 }}
+              costas={{ nome: perfil?.apelido || perfil?.nome?.split(" ")[0] || "Craque", numero: perfil?.numero_camisa ?? 10 }}
               largura={130}
             />
           </div>

@@ -8,6 +8,7 @@ import { calcularEstatisticas, carregarPeriodo, lideres, premioPorDias, type Dad
 import { inicioMes, inicioSemana, isoDia, deIso } from "@/lib/datas";
 import { type Membro } from "@/lib/pelada";
 import type { Raridade } from "@/components/Carta";
+import { calcularConquistas, seloDe, type Ganha } from "@/lib/conquistas";
 
 // raridade = a carta automática; desbloqueadas = especiais que o jogador já pode escolher.
 export type InfoCarta = {
@@ -16,7 +17,11 @@ export type InfoCarta = {
   medalhasMes: number;
   desbloqueadas: Raridade[];
   artilheiroSemana?: boolean; // evento: artilheiro da semana passada ganha a carta Artilheiro por 7 dias
+  conquistas?: Ganha[]; // conquistas da temporada (selos no card)
 };
+
+// Até 4 selos de conquista pra mostrar no card.
+export const selosCarta = (info: InfoCarta | undefined | null) => (info?.conquistas ?? []).slice(0, 4).map(seloDe);
 
 export function ehAniversario(nascimento?: string | null, hoje = new Date()): boolean {
   if (!nascimento) return false;
@@ -96,6 +101,7 @@ export async function carregarCartas(peladaId: string): Promise<{ cartas: Map<st
   };
   const temporada = filtrar(anoIni, isoDia(hoje));
   const estTemporada = calcularEstatisticas(temporada);
+  const conquistas = calcularConquistas(temporada);
   const semanaPassada = filtrar(isoDia(semanaPassadaIni), isoDia(semanaPassadaFim));
   const destaque = new Set(premioPorDias(semanaPassada, "craque"));
   const artSemana = new Set(lideres([...calcularEstatisticas(semanaPassada).values()], (l) => l.gols).ids);
@@ -129,7 +135,7 @@ export async function carregarCartas(peladaId: string): Promise<{ cartas: Map<st
     if (destaque.has(id)) raridade = "destaque";
     if (doMes.has(id)) raridade = "mes";
     const base: Raridade[] = raridade === "ouro" ? ["bronze", "prata", "ouro"] : raridade === "prata" ? ["bronze", "prata"] : ["bronze"];
-    cartas.set(id, { raridade, temporada: l, medalhasMes: meds, desbloqueadas: [...base, ...(especiais.get(id) ?? [])], artilheiroSemana: artSemana.has(id) });
+    cartas.set(id, { raridade, temporada: l, medalhasMes: meds, desbloqueadas: [...base, ...(especiais.get(id) ?? [])], artilheiroSemana: artSemana.has(id), conquistas: conquistas.get(id) ?? [] });
   }
   return { cartas, temporada };
 }

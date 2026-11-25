@@ -7,10 +7,11 @@ import { useRouter } from "next/navigation";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { useSessao } from "@/lib/sessao";
 import { carregarElenco, nomeCurto, type Membro } from "@/lib/pelada";
-import { carregarCartas, cartaFinal, posicaoCarta, rotuloEvento, statsCarta, type InfoCarta } from "@/lib/cartas";
+import { carregarCartas, cartaFinal, posicaoCarta, rotuloEvento, selosCarta, statsCarta, type InfoCarta } from "@/lib/cartas";
 import { compartilharDataUrl, baixarDataUrl, gerarPng } from "@/lib/imagem";
 import Carta, { ESTILOS, LIBERA, ORDEM_RARIDADE, type Raridade } from "@/components/Carta";
 import Topo, { Carregando } from "@/components/Topo";
+import Conquistas from "@/components/Conquistas";
 
 const CORES = ["#C8102E", "#7444D6", "#1A8F4E", "#1B6FD6", "#E07A10", "#121212", "#C2185B", "#0E7C86"];
 
@@ -102,6 +103,7 @@ export default function MeuCardPage() {
         pelada={v.pelada.nome}
         raridade={cartaFinal(info, estilo, membro.nascimento)}
         rotulo={rotuloEvento(info, membro.nascimento)}
+        selos={selosCarta(info)}
         cor={cor}
         foto={perfil?.foto_url}
         stats={statsCarta(membro, info.temporada, info.medalhasMes)}
@@ -186,6 +188,8 @@ export default function MeuCardPage() {
           </div>
         </section>
       )}
+
+      {info && <Conquistas ganhas={info.conquistas ?? []} />}
 
       <div className="grid grid-cols-2 gap-2">
         <Link href="/perfil" className="flex h-11 items-center justify-center rounded-xl border border-borda bg-white text-sm font-semibold">

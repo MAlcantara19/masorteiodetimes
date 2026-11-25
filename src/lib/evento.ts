@@ -42,10 +42,11 @@ export type ConfigSorteio = {
 export const CONFIG_PADRAO: ConfigSorteio = { times: 3, porTime: 5, modo: "simples", equilibrarPosicoes: true, goleiroFixo: true };
 
 // O evento "do momento": o mais recente a partir de ontem (pra não perder a pelada que passou da meia-noite).
-export async function eventoAtual(peladaId: string): Promise<Evento | null> {
+// Com `lancarErro`, sem internet dá erro em vez de "nenhuma pelada" (a tela da partida usa pra manter o que já tem).
+export async function eventoAtual(peladaId: string, lancarErro = false): Promise<Evento | null> {
   const ontem = new Date();
   ontem.setDate(ontem.getDate() - 1);
-  const { data } = await criarClienteSupabase()
+  const { data, error } = await criarClienteSupabase()
     .from("eventos")
     .select("*")
     .eq("pelada_id", peladaId)
@@ -54,6 +55,7 @@ export async function eventoAtual(peladaId: string): Promise<Evento | null> {
     .order("data", { ascending: true })
     .order("created_at", { ascending: false })
     .limit(5);
+  if (error && lancarErro) throw new Error(error.message);
   const lista = (data ?? []) as Evento[];
   // Prefere o que está em andamento; senão o mais próximo.
   return lista.find((e) => e.status === "em_jogo") ?? lista.find((e) => e.status !== "encerrado") ?? lista[0] ?? null;

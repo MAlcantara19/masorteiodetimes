@@ -232,3 +232,32 @@ export function premioPorDias(d: DadosPeriodo, cat: "craque" | "bagre", todosOsD
   const ord = [...vitorias.entries()].sort((a, b) => b[1] - a[1] || total(b[0]) - total(a[0]));
   return ord.filter((x) => x[1] === ord[0][1] && total(x[0]) === total(ord[0][0])).map((x) => x[0]);
 }
+
+// Recorta um período de dados já carregados (sem ir de novo no banco).
+export function filtrarPeriodo(tudo: DadosPeriodo, de?: string, ate?: string): DadosPeriodo {
+  const evs = tudo.eventos.filter((e) => (!de || e.data >= de) && (!ate || e.data <= ate));
+  const ids = new Set(evs.map((e) => e.id));
+  const pids = new Set(tudo.partidas.filter((p) => ids.has(p.evento_id)).map((p) => p.id));
+  return {
+    eventos: evs,
+    partidas: tudo.partidas.filter((p) => ids.has(p.evento_id)),
+    lances: tudo.lances.filter((l) => pids.has(l.partida_id)),
+    sorteios: tudo.sorteios.filter((s) => ids.has(s.evento_id)),
+    presencas: tudo.presencas.filter((p) => ids.has(p.evento_id)),
+    pausas: tudo.pausas.filter((p) => pids.has(p.partida_id)),
+    votos: tudo.votos.filter((v) => ids.has(v.evento_id)),
+  };
+}
+
+// Quem esteve em cada pelada (dia com jogo): sorteio oficial + confirmados.
+export function presentesPorDia(d: DadosPeriodo): { evento_id: string; data: string; ids: Set<string> }[] {
+  const sorteioDo = new Map(d.sorteios.map((s) => [s.evento_id, s]));
+  return d.eventos
+    .filter((e) => d.partidas.some((p) => p.evento_id === e.id))
+    .map((e) => {
+      const s = sorteioDo.get(e.id);
+      const ids = new Set<string>([...(s?.times.flat() ?? []), ...((s?.goleiros ?? []).filter(Boolean) as string[])]);
+      d.presencas.filter((p) => p.evento_id === e.id && p.status === "confirmado").forEach((p) => ids.add(p.membro_id));
+      return { evento_id: e.id, data: e.data, ids };
+    });
+}

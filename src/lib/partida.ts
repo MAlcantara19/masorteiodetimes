@@ -126,6 +126,7 @@ export function calcularFila(qtdTimes: number, partidas: Partida[], regra: Pelad
 
 // ---------- Ações (com fila offline) ----------
 
+// acao "__nova" = criar a próxima partida (dados = parâmetros do nova_partida, com o id já escolhido no aparelho).
 type Acao = { partida: string; acao: string; dados: Record<string, unknown>; pin: string | null; nome: string | null };
 const CHAVE_FILA = "masorteio:fila-acoes";
 
@@ -147,14 +148,34 @@ export function acoesPendentes(): number {
 }
 
 function ehErroDeRede(msg: string) {
-  return /fetch|network|Failed|Load failed|timeout/i.test(msg);
+  return /fetch|network|Failed|Load failed|timeout|offline/i.test(msg);
 }
 
-// Manda a ação pro banco. Sem internet, guarda e reenvia depois.
+type Sb = ReturnType<typeof criarClienteSupabase>;
+
+async function mandar(sb: Sb, a: Acao): Promise<{ error: { message: string } | null }> {
+  if (a.acao === "__nova") {
+    const r = await sb.rpc("nova_partida", { ...a.dados, p_pin: a.pin });
+    // Antes do SQL 0005 o banco não aceita o id criado no aparelho: tenta sem ele.
+    if (r.error && /p_id|function|schema cache/i.test(r.error.message)) {
+      const { p_id: _id, ...sem } = a.dados;
+      void _id;
+      return sb.rpc("nova_partida", { ...sem, p_pin: a.pin });
+    }
+    return r;
+  }
+  return sb.rpc("acao_partida", { p_partida: a.partida, p_acao: a.acao, p_dados: a.dados, p_pin: a.pin, p_nome: a.nome });
+}
+
+// Manda a ação pro banco. Sem internet (ou com ações ainda na fila), guarda e reenvia depois, na ordem.
 export async function enviarAcao(a: Acao): Promise<{ ok: boolean; erro?: string; offline?: boolean }> {
+  if (lerFila().length || (typeof navigator !== "undefined" && navigator.onLine === false)) {
+    gravarFila([...lerFila(), a]);
+    return { ok: false, offline: true };
+  }
   const sb = criarClienteSupabase();
   try {
-    const { error } = await sb.rpc("acao_partida", { p_partida: a.partida, p_acao: a.acao, p_dados: a.dados, p_pin: a.pin, p_nome: a.nome });
+    const { error } = await mandar(sb, a);
     if (!error) return { ok: true };
     if (ehErroDeRede(error.message)) throw new Error(error.message);
     return { ok: false, erro: error.message };
@@ -172,8 +193,7 @@ export async function reenviarPendentes(): Promise<number> {
   try {
     let fila = lerFila();
     while (fila.length) {
-      const a = fila[0];
-      const { error } = await sb.rpc("acao_partida", { p_partida: a.partida, p_acao: a.acao, p_dados: a.dados, p_pin: a.pin, p_nome: a.nome });
+      const { error } = await mandar(sb, fila[0]);
       if (error && ehErroDeRede(error.message)) break; // ainda sem internet
       fila = fila.slice(1); // enviada (ou recusada de vez): tira da fila
       gravarFila(fila);
@@ -183,6 +203,21 @@ export async function reenviarPendentes(): Promise<number> {
     return lerFila().length;
   } finally {
     reenviando = false;
+  }
+}
+
+// Última foto da tela da partida, pra abrir mesmo sem internet.
+export function guardarCache<T>(chave: string, valor: T) {
+  try {
+    window.localStorage.setItem(`masorteio:cache:${chave}`, JSON.stringify(valor));
+  } catch {}
+}
+export function lerCache<T>(chave: string): T | null {
+  try {
+    const raw = window.localStorage.getItem(`masorteio:cache:${chave}`);
+    return raw ? (JSON.parse(raw) as T) : null;
+  } catch {
+    return null;
   }
 }
 

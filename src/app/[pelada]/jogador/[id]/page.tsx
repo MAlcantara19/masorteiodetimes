@@ -6,11 +6,12 @@ import { useParams } from "next/navigation";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
 import { calcularEstatisticas, premioPorDias, type Linha } from "@/lib/estatisticas";
-import { carregarCartas, carregarPerfisPublicos, cartaFinal, posicaoCarta, rotuloEvento, statsCarta, type InfoCarta, type PerfilPublico } from "@/lib/cartas";
+import { carregarCartas, carregarPerfisPublicos, cartaFinal, posicaoCarta, rotuloEvento, selosCarta, statsCarta, type InfoCarta, type PerfilPublico } from "@/lib/cartas";
 import { curtaDia } from "@/lib/datas";
 import { POSICOES } from "@/lib/elenco";
 import Carta from "@/components/Carta";
 import Topo, { Carregando } from "@/components/Topo";
+import Conquistas from "@/components/Conquistas";
 import { GraficoColunas } from "@/components/Graficos";
 
 type Medalha = { tipo: string; periodo: string; valor: number | null };
@@ -101,6 +102,7 @@ export default function JogadorPage() {
           pelada={pelada.nome}
           raridade={cartaFinal(info, foto?.estilo_card, m.nascimento)}
           rotulo={rotuloEvento(info, m.nascimento)}
+        selos={selosCarta(info)}
           cor={foto?.cor_card}
           foto={foto?.foto_url}
           stats={statsCarta(m, l, info?.medalhasMes ?? 0)}
@@ -131,6 +133,8 @@ export default function JogadorPage() {
       <span className="-mt-2 text-center text-xs text-apagado">Temporada {new Date().getFullYear()}</span>
 
       {porPelada.length > 1 && !m.goleiro && <GraficoColunas titulo="GOLS + ASSISTÊNCIAS POR PELADA" unidade="participações em gol" itens={porPelada} />}
+
+      {info && <Conquistas ganhas={info.conquistas ?? []} />}
 
       <section className="flex flex-col gap-2 rounded-2xl border border-borda bg-white p-4">
         <span className="text-xs font-bold tracking-wider text-apagado">MEDALHAS</span>

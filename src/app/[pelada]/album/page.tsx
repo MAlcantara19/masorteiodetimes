@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { carregarElenco, nomeCurto, usePelada, type Membro } from "@/lib/pelada";
-import { carregarCartas, carregarPerfisPublicos, cartaFinal, montarSelecao, rotuloEvento, posicaoCarta, statsCarta, type InfoCarta, type PerfilPublico } from "@/lib/cartas";
+import { carregarCartas, carregarPerfisPublicos, cartaFinal, montarSelecao, rotuloEvento, posicaoCarta, selosCarta, statsCarta, type InfoCarta, type PerfilPublico } from "@/lib/cartas";
 import { calcularEstatisticas, type Linha } from "@/lib/estatisticas";
 import { inicioMes, nomeMes } from "@/lib/datas";
 import { baixarDataUrl, gerarPng } from "@/lib/imagem";
@@ -74,6 +74,7 @@ export default function AlbumPage() {
         pelada={pelada!.nome}
         raridade={cartaFinal(i, f?.estilo_card, m.nascimento)}
         rotulo={rotuloEvento(i, m.nascimento)}
+        selos={selosCarta(i)}
         cor={f?.cor_card}
         foto={f?.foto_url}
         stats={statsCarta(m, i?.temporada ?? null, i?.medalhasMes ?? 0)}

@@ -53,6 +53,13 @@ body {
 .pacote-tremer { animation: pacote-tremer 0.9s ease-in-out 2; }
 .pacote-revelar { animation: pacote-revelar 0.9s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
 .pacote-brilho { animation: pacote-brilho 1s ease-out both; }
+@keyframes telao-gol {
+  0% { opacity: 0; transform: scale(0.6); }
+  12% { opacity: 1; transform: scale(1.08); }
+  20% { transform: scale(1); }
+  100% { opacity: 1; }
+}
+.telao-gol { animation: telao-gol 1.2s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
 @media (prefers-reduced-motion: reduce) {
-  .pacote-tremer, .pacote-revelar, .pacote-brilho { animation: none; }
+  .pacote-tremer, .pacote-revelar, .pacote-brilho, .telao-gol { animation: none; }
 }

@@ -12,6 +12,7 @@ export default function PerfilPage() {
   const [nome, setNome] = useState("");
   const [apelido, setApelido] = useState("");
   const [foto, setFoto] = useState<string | null>(null);
+  const [numero, setNumero] = useState("");
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
   const primeiro = perfil ? !perfil.perfil_completo : false;
@@ -26,6 +27,7 @@ export default function PerfilPage() {
     setNome(perfil.nome);
     setApelido(perfil.apelido ?? "");
     setFoto(perfil.foto_url);
+    setNumero(perfil.numero_camisa != null ? String(perfil.numero_camisa) : "");
   }, [perfil]);
 
   async function enviarFoto(arquivo: File) {
@@ -50,10 +52,14 @@ export default function PerfilPage() {
       return;
     }
     setSalvando(true);
-    const { error } = await criarClienteSupabase()
+    const sb = criarClienteSupabase();
+    const { error } = await sb
       .from("profiles")
       .update({ nome: nome.trim(), apelido: apelido.trim() || null, foto_url: foto, perfil_completo: true })
       .eq("id", usuario.id);
+    // Número da camisa (precisa do SQL 0005; sem ele, só não salva o número).
+    const n = numero.trim() === "" ? null : Math.min(99, Math.max(0, Number(numero)));
+    if (!error && (perfil?.numero_camisa ?? null) !== n) await sb.from("profiles").update({ numero_camisa: n }).eq("id", usuario.id);
     setSalvando(false);
     if (error) {
       setErro("Não deu pra salvar. Tenta de novo.");
@@ -101,6 +107,17 @@ export default function PerfilPage() {
             onChange={(e) => setApelido(e.target.value)}
             placeholder="Alcântara"
             className="h-[46px] rounded-xl border border-[#D8D0E6] px-3 text-[15px] font-normal"
+          />
+        </label>
+
+        <label className="flex flex-col gap-1 text-[13px] font-semibold">
+          Número da camisa (opcional)
+          <input
+            value={numero}
+            onChange={(e) => setNumero(e.target.value.replace(/\D/g, "").slice(0, 2))}
+            inputMode="numeric"
+            placeholder="10"
+            className="h-[46px] w-28 rounded-xl border border-[#D8D0E6] px-3 text-[15px] font-normal"
           />
         </label>
 

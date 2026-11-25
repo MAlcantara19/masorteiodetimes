@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { criarClienteSupabase } from "@/lib/supabase/client";
 import { useSessao } from "@/lib/sessao";
 import { nomeCurto, type Pelada } from "@/lib/pelada";
+import NumerosMaster from "@/components/NumerosMaster";
 import Topo, { Carregando } from "@/components/Topo";
 import FormPelada from "@/components/FormPelada";
 import { PLANOS, RECURSOS, planoDe, temRecurso, type Plano, type Recurso } from "@/lib/planos";
@@ -224,6 +225,8 @@ export default function MasterPage() {
   return (
     <main className="mx-auto flex w-full max-w-xl flex-col gap-4 px-4 py-6">
       <Topo titulo="Painel master" sub="Só você vê esta tela" voltar="/mais" direita={<span className="rounded-full bg-noite px-2.5 py-1 text-xs font-bold text-roxo-claro">MASTER</span>} />
+
+      <NumerosMaster peladas={peladas} />
 
       <section className="flex flex-col gap-2 rounded-2xl bg-noite p-4 text-white">
         <span className="text-xs font-bold tracking-wider text-roxo-claro">MASTERS</span>

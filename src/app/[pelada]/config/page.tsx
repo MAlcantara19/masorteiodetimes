@@ -39,14 +39,14 @@ function Bolinhas({ valor, mudar, rotulo }: { valor: string; mudar: (c: string) 
 }
 
 // Cores da pelada e a camisa (o app inteiro fica com a cor escolhida).
-function ConfigCores({ pelada, nomeAdmin, aoSalvar }: { pelada: Pelada; nomeAdmin: string; aoSalvar: () => void }) {
+function ConfigCores({ pelada, nomeAdmin, numeroAdmin, aoSalvar }: { pelada: Pelada; nomeAdmin: string; numeroAdmin: number; aoSalvar: () => void }) {
   const [cor, setCor] = useState(pelada.cor_banner || "#7444D6");
   const [cor2, setCor2] = useState(pelada.cor_secundaria || "#FFFFFF");
   const [estilo, setEstilo] = useState(pelada.camisa_estilo || "lisa");
   const [erro, setErro] = useState<string | null>(null);
   async function salvar() {
     const { error } = await criarClienteSupabase().from("peladas").update({ cor_banner: cor, cor_secundaria: cor2, camisa_estilo: estilo }).eq("id", pelada.id);
-    if (error) return setErro("Pra salvar a camisa, rode no Supabase o SQL novo (supabase/migrations/0004).");
+    if (error) return setErro(/check/i.test(error.message) ? "Esse modelo precisa do SQL novo (supabase/migrations/0005). Os 5 primeiros já funcionam." : "Não deu pra salvar: " + error.message);
     setErro(null);
     aoSalvar();
   }
@@ -55,15 +55,22 @@ function ConfigCores({ pelada, nomeAdmin, aoSalvar }: { pelada: Pelada; nomeAdmi
       <span className="font-semibold">Cores e camisa da pelada</span>
       <div className="flex justify-center gap-2 rounded-2xl bg-fundo py-3">
         <Camisa cor={cor} cor2={cor2} estilo={estilo} logo={pelada.logo_url} sigla={siglaDe(pelada.nome)} largura={140} />
-        <Camisa cor={cor} cor2={cor2} estilo={estilo} costas={{ nome: nomeAdmin, numero: 10 }} largura={140} />
+        <Camisa cor={cor} cor2={cor2} estilo={estilo} costas={{ nome: nomeAdmin, numero: numeroAdmin }} largura={140} />
       </div>
       <Bolinhas rotulo="Cor principal (vira a cor do app nesta pelada)" valor={cor} mudar={setCor} />
       <Bolinhas rotulo="Cor do detalhe" valor={cor2} mudar={setCor2} />
       <div className="flex flex-col gap-1.5">
-        <span className="text-[13px] font-semibold">Estilo</span>
-        <div className="flex flex-wrap gap-1.5">
+        <span className="text-[13px] font-semibold">Modelo</span>
+        <div className="grid grid-cols-4 gap-1.5">
           {ESTILOS_CAMISA.map((e) => (
-            <button key={e.valor} type="button" onClick={() => setEstilo(e.valor)} className={`h-9 rounded-full border px-3 text-sm font-semibold ${estilo === e.valor ? "border-roxo bg-roxo text-white" : "border-borda"}`}>
+            <button
+              key={e.valor}
+              type="button"
+              onClick={() => setEstilo(e.valor)}
+              aria-pressed={estilo === e.valor}
+              className={`flex flex-col items-center gap-0.5 rounded-xl border-2 px-1 pt-1.5 pb-1 text-[11px] leading-tight font-semibold ${estilo === e.valor ? "border-roxo bg-roxo-suave text-roxo-escuro" : "border-transparent bg-fundo"}`}
+            >
+              <Camisa cor={cor} cor2={cor2} estilo={e.valor} sigla={siglaDe(pelada.nome)} logo={pelada.logo_url} largura={54} />
               {e.rotulo}
             </button>
           ))}
@@ -203,6 +210,7 @@ export default function ConfigPage() {
           key={pelada.id}
           pelada={pelada}
           nomeAdmin={perfil?.apelido || perfil?.nome?.split(" ")[0] || "Craque"}
+          numeroAdmin={perfil?.numero_camisa ?? 10}
           aoSalvar={() => {
             recarregar();
             recarregarSessao();

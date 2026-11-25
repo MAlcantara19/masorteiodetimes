@@ -30,6 +30,7 @@ export type Pelada = {
   plano?: string | null;
   recursos?: Record<string, boolean> | null;
   plano_ate?: string | null;
+  demo?: boolean;
 };
 
 export type Atributos = {

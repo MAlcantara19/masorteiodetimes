@@ -61,9 +61,10 @@ type Props = {
   stats: { v: number | string; l: string }[];
   escala?: number;
   rotulo?: string; // troca o selo (ex.: "ARTILHEIRO DA SEMANA")
+  selos?: string[]; // emojis das conquistas (hat-trick, 10 seguidas…)
 };
 
-const Carta = forwardRef<HTMLDivElement, Props>(function Carta({ apelido, posicao, pelada, raridade, cor, foto, stats, escala = 1, rotulo }, ref) {
+const Carta = forwardRef<HTMLDivElement, Props>(function Carta({ apelido, posicao, pelada, raridade, cor, foto, stats, escala = 1, rotulo, selos }, ref) {
   const t = ESTILOS[raridade];
   return (
     <div
@@ -134,6 +135,15 @@ const Carta = forwardRef<HTMLDivElement, Props>(function Carta({ apelido, posica
             </div>
           ))}
         </div>
+        {!!selos?.length && (
+          <div className="absolute flex" style={{ bottom: 19 * escala, gap: 3 * escala, fontSize: 12 * escala, lineHeight: 1 }}>
+            {selos.map((s, i) => (
+              <span key={i} className="flex items-center justify-center rounded-full" style={{ width: 19 * escala, height: 19 * escala, background: t.photoBg, border: `1px solid ${t.line}` }}>
+                {s}
+              </span>
+            ))}
+          </div>
+        )}
         <span className="absolute font-semibold" style={{ bottom: 7 * escala, fontSize: 8 * escala, letterSpacing: 0.6, color: t.accent }}>
           MA SORTEIO
         </span>

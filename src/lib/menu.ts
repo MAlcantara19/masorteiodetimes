@@ -6,7 +6,7 @@ import type { PeladaResumo } from "@/lib/sessao";
 import { temRecurso, type Recurso } from "@/lib/planos";
 
 // Itens que dependem do plano da pelada.
-const DO_PLANO: Record<string, Recurso> = { pagar: "pix", retrospectiva: "retrospectiva", banners: "banners", fotos: "fotos", album: "album", confrontos: "confrontos_admin" };
+const DO_PLANO: Record<string, Recurso> = { pagar: "pix", retrospectiva: "retrospectiva", banners: "banners", fotos: "fotos", album: "album", confrontos: "confrontos_admin", caixa: "caixa", telao: "telao" };
 
 export type ItemMenu = { id: string; href: string; titulo: string; sub: string; icone: NomeIcone };
 export type GruposMenu = { master: ItemMenu[]; admin: ItemMenu[]; jogador: ItemMenu[]; geral: ItemMenu[] };
@@ -18,11 +18,16 @@ export function montarMenu(atual: PeladaResumo | null, admin: boolean, ehMaster:
     jogador.push(
       { id: "jogo", href: `${b}/jogo`, titulo: "Partida", sub: "cronômetro e placar ao vivo", icone: "partida" },
       { id: "aovivo", href: `/p/${atual.slug}/ao-vivo`, titulo: "Link ao vivo", sub: "placar e artilharia pra todos", icone: "link" },
+      { id: "telao", href: `/p/${atual.slug}/telao`, titulo: "Telão", sub: "placar gigante na TV da quadra", icone: "tela" },
       { id: "campeonato", href: `${b}/campeonato`, titulo: "Campeonato", sub: "melhores da semana e do mês", icone: "trofeu" },
+      { id: "meudia", href: `${b}/meu-dia`, titulo: "Meu dia", sub: "seu resultado do dia, pra postar", icone: "cartao" },
+      { id: "hall", href: `${b}/hall-da-fama`, titulo: "Hall da fama", sub: "recordes de todos os tempos", icone: "trofeu" },
+      { id: "presenca", href: `${b}/presenca`, titulo: "Presença", sub: "quem mais veio e quem sumiu", icone: "lista" },
       { id: "votar", href: `/p/${atual.slug}/votar`, titulo: "Votação", sub: "craque, bagre e goleiro", icone: "estrela" },
       { id: "avaliar", href: `/p/${atual.slug}/avaliar`, titulo: "Avaliar a pelada", sub: "link pós-jogo pra galera", icone: "check" },
       { id: "album", href: `${b}/album`, titulo: "Álbum", sub: "as cartas de todo mundo e a seleção", icone: "imagem" },
       { id: "fotos", href: `${b}/fotos`, titulo: "Fotos do dia", sub: "manda e vê as fotos da pelada", icone: "imagem" },
+      { id: "caixa", href: `${b}/caixa`, titulo: "Caixa da pelada", sub: "entradas, saídas e saldo", icone: "dinheiro" },
       { id: "pagar", href: `${b}/pagar`, titulo: "Mensalidade (Pix)", sub: "QR Code com o valor e “já paguei”", icone: "dinheiro" },
       { id: "retrospectiva", href: `${b}/retrospectiva`, titulo: `Retrospectiva ${new Date().getFullYear()}`, sub: "o seu ano na pelada, pra postar", icone: "grafico" },
       { id: "pagina", href: `/p/${atual.slug}`, titulo: "Página da pelada", sub: "pública, com convite e QR code", icone: "inicio" },

@@ -22,6 +22,7 @@ import {
 import { DIAS, curtaDia, deIso, isoDia, proximaPelada } from "@/lib/datas";
 import { Escolha, Interruptor } from "@/components/Folha";
 import Topo, { Carregando } from "@/components/Topo";
+import { linkZap } from "@/lib/resumo-zap";
 
 export default function SortearPage() {
   const router = useRouter();
@@ -36,6 +37,8 @@ export default function SortearPage() {
   const [escolhendo, setEscolhendo] = useState<{ tipo: "junto" | "separar"; ids: string[] } | null>(null);
   const [sorteando, setSorteando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  // Lista de espera inteligente: quem saiu e o suplente que entrou no lugar (pra avisar no Zap).
+  const [chamado, setChamado] = useState<{ entrou: string; saiu: string } | null>(null);
 
   const carregar = useCallback(async () => {
     if (!pelada) return;
@@ -99,8 +102,26 @@ export default function SortearPage() {
 
   async function mudarStatus(membroId: string, status: Presenca["status"]) {
     if (!evento) return;
-    setPres(pres.map((p) => (p.membro_id === membroId ? { ...p, status } : p)));
-    await criarClienteSupabase().from("presencas").update({ status }).eq("evento_id", evento.id).eq("membro_id", membroId);
+    // Saiu alguém que estava jogando e tem gente esperando: o primeiro da espera sobe.
+    const pos = ordenada.findIndex((p) => p.membro_id === membroId);
+    const sobe = status === "saiu" && pos >= 0 && pos < vagas ? ordenada[vagas] : undefined;
+    setPres(pres.map((p) => (p.membro_id === membroId ? { ...p, status } : sobe && p.membro_id === sobe.membro_id ? { ...p, status: "confirmado" } : p)));
+    const sb = criarClienteSupabase();
+    await sb.from("presencas").update({ status }).eq("evento_id", evento.id).eq("membro_id", membroId);
+    if (sobe) {
+      if (sobe.status === "espera") await sb.from("presencas").update({ status: "confirmado" }).eq("evento_id", evento.id).eq("membro_id", sobe.membro_id);
+      setChamado({ entrou: sobe.membro_id, saiu: membroId });
+    }
+  }
+
+  function textoChamado(c: { entrou: string; saiu: string }) {
+    if (!evento || !pelada) return "";
+    const dia = deIso(evento.data);
+    return [
+      `Fala, ${nome(c.entrou)}! ⚽`,
+      `Abriu vaga na ${pelada.nome} (${DIAS[dia.getDay()].toLowerCase()} ${curtaDia(evento.data)}${evento.horario ? ` às ${evento.horario}` : ""}) e você é o próximo da lista de espera.`,
+      "Confirma aí se vai! 🙌",
+    ].join("\n");
   }
 
   // Escolher quem fica na espera: manda pro fim da fila.
@@ -276,6 +297,19 @@ export default function SortearPage() {
                 🧤 {nome(p.membro_id)}
               </button>
             ))}
+          </div>
+        )}
+        {chamado && (
+          <div className="flex items-center gap-2 rounded-xl border-2 border-zap/40 bg-white p-3 text-sm">
+            <span className="flex-1">
+              <strong>{nome(chamado.entrou)}</strong> saiu da espera e entrou no lugar de {nome(chamado.saiu)}.
+            </span>
+            <a href={linkZap(textoChamado(chamado))} target="_blank" rel="noreferrer" onClick={() => setChamado(null)} className="shrink-0 rounded-full bg-zap px-3 py-1.5 text-xs font-bold text-white">
+              Avisar no Zap
+            </a>
+            <button type="button" aria-label="Fechar" onClick={() => setChamado(null)} className="text-apagado">
+              ×
+            </button>
           </div>
         )}
         <p className={`mt-1 rounded-xl px-3 py-2 text-sm font-semibold ${sobra === 0 ? "bg-roxo-suave text-roxo-escuro" : "bg-alerta-suave text-alerta-escuro"}`}>
