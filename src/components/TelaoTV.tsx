@@ -115,6 +115,9 @@ export default function TelaoTV({ pelada, link }: { pelada: Pelada; link: string
   const relogio = contaPraCima ? formatarRelogio(rolando) : excedido ? `+${formatarRelogio(excedido)}` : formatarRelogio(restante);
   const status =
     partida.status === "encerrada" ? "ENCERRADO" : partida.status === "pausado" ? "PAUSADO" : partida.status === "rolando" ? (excedido ? "TEMPO ESGOTADO" : "AO VIVO") : "VAI COMEÇAR";
+  // Acabou o tempo (ou bateu os gols) com a bola rolando: faixa piscando bem grande.
+  const bateuGols = pelada.regra_fim !== "tempo" && Math.max(partida.placar_a, partida.placar_b) >= pelada.gols_limite;
+  const acabou = (partida.status === "rolando" || partida.status === "pausado") && (!!excedido || bateuGols);
   const times = dados.sorteio.times;
   const fila = calcularFila(times.length, dados.partidas, pelada.regra_empate);
   const proximo = partida.status === "encerrada" ? fila.proximo : null;
@@ -159,6 +162,13 @@ export default function TelaoTV({ pelada, link }: { pelada: Pelada; link: string
           {status} · JOGO {partida.numero}
         </span>
       </header>
+
+      {acabou && (
+        <div className="fim-tempo mt-[1.5vmin] flex items-center justify-center gap-[3vmin] rounded-[2vmin] py-[1.2vmin]">
+          <span className="font-display text-[7vmin] leading-none font-black">{bateuGols ? `${pelada.gols_limite} GOLS · ACABOU` : "ACABOU O TEMPO"}</span>
+          <span className="text-[3vmin] font-semibold">{partida.status === "pausado" ? "jogo pausado" : "na próxima saída de bola"}</span>
+        </div>
+      )}
 
       <main className="flex flex-1 items-center gap-[3vmin]">
         <section className="flex flex-[2] flex-col items-center gap-[2vh]">
@@ -213,8 +223,9 @@ export default function TelaoTV({ pelada, link }: { pelada: Pelada; link: string
 
       <SomTelao
         golId={ultimoGol?.id ?? null}
-        golFala={ultimoGol ? (ultimoGol.tipo === "gol_contra" ? "Gol contra!" : ultimoGol.autor_id ? `Gooool do ${nome(ultimoGol.autor_id)}!` : "Gooool!") : ""}
-        tempoAcabou={partida.status === "rolando" && (!!excedido || (pelada.regra_fim !== "tempo" && Math.max(partida.placar_a, partida.placar_b) >= pelada.gols_limite))}
+        golNome={ultimoGol?.autor_id ? nome(ultimoGol.autor_id) : null}
+        golContra={ultimoGol?.tipo === "gol_contra"}
+        tempoAcabou={acabou}
         partidaId={partida.id}
       />
 

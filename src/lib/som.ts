@@ -49,16 +49,43 @@ export function apitar(tipo: "fim" | "curto" = "fim") {
   trinado(0.9, 1.1);
 }
 
+function frase(texto: string, rate: number, pitch: number) {
+  const u = new SpeechSynthesisUtterance(texto);
+  u.lang = "pt-BR";
+  u.rate = rate;
+  u.pitch = pitch;
+  const vozes = window.speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().replace("_", "-").startsWith("pt-br"));
+  // Prefere as vozes "naturais"/online, que soam melhor que a voz robô padrão.
+  const voz = vozes.find((v) => /natural|online|google/i.test(v.name)) ?? vozes[0];
+  if (voz) u.voice = voz;
+  return u;
+}
+
 export function falar(texto: string) {
   try {
     if (!("speechSynthesis" in window)) return;
-    const u = new SpeechSynthesisUtterance(texto);
-    u.lang = "pt-BR";
-    u.rate = 1.05;
-    u.pitch = 1.1;
-    const voz = window.speechSynthesis.getVoices().find((v) => v.lang.toLowerCase().startsWith("pt-br"));
-    if (voz) u.voice = voz;
     window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(u);
+    window.speechSynthesis.speak(frase(texto, 1.05, 1.1));
+  } catch {}
+}
+
+// Narrador empolgado (voz do próprio aparelho, sem imitar nenhum narrador de verdade).
+const DEPOIS = [
+  (n: string) => `É do ${n}!`,
+  (n: string) => `${n}! Balançou a rede!`,
+  (n: string) => `Ele mesmo, ${n}! Que pintura!`,
+  (n: string) => `${n} não perdoa!`,
+  (n: string) => `Lá vai ${n}, e é gol!`,
+  (n: string) => `Bola na rede! Gol do ${n}!`,
+];
+
+export function narrarGol(nome: string | null, contra = false) {
+  try {
+    if (!("speechSynthesis" in window)) return;
+    const s = window.speechSynthesis;
+    s.cancel();
+    s.speak(frase(contra ? "Gol contra!" : "Goooooooooooool!", 0.75, 1.35));
+    if (contra) s.speak(frase("Que azar!", 1.1, 1.1));
+    else if (nome) s.speak(frase(DEPOIS[Math.floor(Math.random() * DEPOIS.length)](nome), 1.1, 1.2));
   } catch {}
 }

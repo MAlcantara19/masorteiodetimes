@@ -30,6 +30,7 @@ import { linkZap, textoDoDia, textoDoJogo } from "@/lib/resumo-zap";
 import CraqueDaPartida, { carregarCraques, craquesPorJogo } from "./CraqueDaPartida";
 import Folha from "./Folha";
 import Icone from "./Icone";
+import SomTelao from "./SomTelao";
 import { Carregando } from "./Topo";
 
 const MOTIVOS = ["Machucou", "Bola longe", "Falta / discussão", "Outro"];
@@ -500,6 +501,8 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
           : partida.status === "rolando"
             ? "ROLANDO"
             : "PRONTO PRA COMEÇAR";
+  const acabou = (partida.status === "rolando" || partida.status === "pausado") && (fimDoTempo || !!chegouGols);
+  const ultimoLance = dados.lances.filter((l) => l.partida_id === partida.id && !l.desfeito).at(-1) ?? null;
   // Passou do tempo: não para, conta o tempo excedido pra cima (+0:01, +0:02…).
   const excedido = !contaPraCima && partida.status !== "aguardando" && restante < 0 ? -restante : 0;
   const relogio = contaPraCima ? formatarRelogio(rolando) : excedido ? `+${formatarRelogio(excedido)}` : formatarRelogio(restante);
@@ -599,14 +602,21 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
         </p>
       )}
 
-      {/* Relógio */}
-      <section className="flex flex-col items-center gap-2 rounded-3xl bg-noite px-4 pt-4 pb-5 text-white">
+      {/* Relógio (pisca laranja/vermelho quando acaba o tempo ou bate os gols) */}
+      <section className={`flex flex-col items-center gap-2 rounded-3xl px-4 pt-4 pb-5 text-white ${acabou ? "fim-tempo" : "bg-noite"}`}>
         <div className="flex w-full items-center justify-between text-xs font-semibold text-[#CFC7E0]">
           <span>JOGO {partida.numero}</span>
           <span>Termina por: {textoRegra(pelada)}</span>
         </div>
-        <span className={`text-xs font-bold tracking-widest ${fimDoTempo ? "text-alerta-suave" : "text-roxo-claro"}`}>{statusTxt}</span>
-        <span className={`font-display text-[84px] leading-none font-bold tabular-nums ${fimDoTempo ? "text-alerta-suave" : ""}`} aria-live="off">
+        {acabou ? (
+          <span className="flex flex-col items-center text-center" role="status">
+            <span className="font-display text-[34px] leading-none font-black tracking-tight">{chegouGols ? `${pelada.gols_limite} GOLS · ACABOU` : "ACABOU O TEMPO"}</span>
+            <span className="pt-1 text-sm font-semibold">{partida.status === "pausado" ? "Jogo pausado" : "Na próxima saída de bola, encerra"}</span>
+          </span>
+        ) : (
+          <span className={`text-xs font-bold tracking-widest ${fimDoTempo ? "text-alerta-suave" : "text-roxo-claro"}`}>{statusTxt}</span>
+        )}
+        <span className={`font-display text-[84px] leading-none font-bold tabular-nums ${fimDoTempo && !acabou ? "text-alerta-suave" : ""}`} aria-live="off">
           {relogio}
         </span>
         {partida.inicio_em && (
@@ -692,6 +702,17 @@ export default function TelaPartida({ pelada, publico }: { pelada: Pelada; publi
         <p className="rounded-xl bg-alerta-suave px-3 py-2 text-sm font-semibold text-alerta-escuro">
           Chegou a {pelada.gols_limite} gols. Pode encerrar o jogo.
         </p>
+      )}
+
+      {partida.status !== "encerrada" && (
+        <SomTelao
+          variante="celular"
+          golId={ultimoLance?.id ?? null}
+          golNome={ultimoLance?.autor_id ? nome(ultimoLance.autor_id) : null}
+          golContra={ultimoLance?.tipo === "gol_contra"}
+          tempoAcabou={acabou}
+          partidaId={partida.id}
+        />
       )}
 
       {/* Placar */}

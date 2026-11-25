@@ -94,7 +94,7 @@ export default function CronometroPage() {
     if ((status === "excedido" || status === "gols") && !vibrou.current) {
       vibrou.current = true;
       if (navigator.vibrate) navigator.vibrate([400, 200, 400, 200, 400]);
-      if (e.som !== false) apitar("fim");
+      if (e.som === true) apitar("fim");
     }
     if (status === "pronto") vibrou.current = false;
   }, [status, e.som]);
@@ -132,6 +132,8 @@ export default function CronometroPage() {
   }
 
   const relogio = excedido ? `+${formatarRelogio(excedido)}` : formatarRelogio(restante);
+  // Tempo esgotado ou bateu os gols: o cartão inteiro pisca (quem segura o celular vê de canto de olho).
+  const acabou = status === "excedido" || status === "gols" || (!!e.inicio && !e.fim && (bateuGols || !!excedido));
   const corRelogio = excedido || bateuGols ? "text-alerta-suave" : "";
   const rotulo = { gols: `FIM · CHEGOU A ${limiteGols} ${limiteGols === 1 ? "GOL" : "GOLS"}`, pronto: "PRONTO PRA COMEÇAR", pausado: `PAUSADO${aberta?.motivo ? " · " + aberta.motivo.toUpperCase() : ""}`, excedido: "TEMPO ESGOTADO · EXCEDIDO", rolando: "ROLANDO", fim: "ENCERRADO" }[status];
 
@@ -153,13 +155,13 @@ export default function CronometroPage() {
   if (telao) {
     return (
       <div
-        className="fixed inset-0 z-[60] flex flex-col items-center justify-center gap-[4vh] bg-noite p-6 text-white"
+        className={`fixed inset-0 z-[60] flex flex-col items-center justify-center gap-[4vh] p-6 text-white ${acabou ? "fim-tempo" : "bg-noite"}`}
         onClick={() => {
           setTelao(false);
           document.exitFullscreen?.().catch(() => {});
         }}
       >
-        <span className="text-[3vh] font-semibold tracking-widest text-roxo-claro">{rotulo}</span>
+        <span className={acabou ? "font-display text-[9vmin] font-black" : "text-[3vh] font-semibold tracking-widest text-roxo-claro"}>{acabou ? (bateuGols ? `${limiteGols} GOLS · ACABOU` : "ACABOU O TEMPO") : rotulo}</span>
         <span className={`font-display text-[28vmin] leading-none font-bold tabular-nums ${corRelogio}`}>{relogio}</span>
         <div className="flex items-center gap-[6vw] font-display font-bold">
           <span className="flex flex-col items-center">
@@ -189,12 +191,12 @@ export default function CronometroPage() {
           type="button"
           onClick={() => {
             liberarSom();
-            setE({ ...e, som: e.som === false });
+            setE({ ...e, som: e.som !== true });
           }}
-          aria-pressed={e.som !== false}
+          aria-pressed={e.som === true}
           className="rounded-full border border-borda bg-white px-3 py-1.5 text-sm font-semibold whitespace-nowrap"
         >
-          {e.som === false ? "🔇 Sem apito" : "📣 Apito"}
+          {e.som === true ? "📣 Apito ligado" : "🔇 Apito desligado"}
         </button>
         <button
           type="button"
@@ -209,9 +211,16 @@ export default function CronometroPage() {
         </span>
       </header>
 
-      <section className="flex flex-col items-center gap-3 rounded-3xl bg-noite px-4 pt-4 pb-5 text-white">
-        <span className={`text-xs font-bold tracking-widest ${excedido || bateuGols ? "text-alerta-suave" : "text-roxo-claro"}`}>{rotulo}</span>
-        <span className={`font-display text-[88px] leading-none font-bold tabular-nums ${corRelogio}`}>{relogio}</span>
+      <section className={`flex flex-col items-center gap-3 rounded-3xl px-4 pt-4 pb-5 text-white ${acabou ? "fim-tempo" : "bg-noite"}`}>
+        {acabou ? (
+          <span className="flex flex-col items-center text-center">
+            <span className="font-display text-[34px] leading-none font-black tracking-tight">{bateuGols ? `${limiteGols} ${limiteGols === 1 ? "GOL" : "GOLS"} · ACABOU` : "ACABOU O TEMPO"}</span>
+            <span className="pt-1 text-sm font-semibold">{aberta ? "Jogo pausado" : "Na próxima saída de bola, encerra"}</span>
+          </span>
+        ) : (
+          <span className="text-xs font-bold tracking-widest text-roxo-claro">{rotulo}</span>
+        )}
+        <span className={`font-display text-[88px] leading-none font-bold tabular-nums ${acabou ? "" : corRelogio}`}>{relogio}</span>
         {e.inicio && (
           <div className="grid w-full grid-cols-3 gap-1 text-center text-[11px] text-[#CFC7E0]">
             <span>
